@@ -128,21 +128,21 @@ export function getFacadeLabel(edge) {
   const angle = (Math.atan2(edge.nz, edge.nx) * 180) / Math.PI;
   const normalizedAngle = ((angle % 360) + 360) % 360;
 
-  if (normalizedAngle >= 337 || normalizedAngle < 22) return "East";
-  if (normalizedAngle < 67) return "South-East";
-  if (normalizedAngle < 112) return "South";
-  if (normalizedAngle < 157) return "South-West";
-  if (normalizedAngle < 202) return "West";
-  if (normalizedAngle < 247) return "North-West";
-  if (normalizedAngle < 292) return "North";
-  return "North-East";
+  if (normalizedAngle >= 337 || normalizedAngle < 22) return "Est";
+  if (normalizedAngle < 67) return "Sud-Est";
+  if (normalizedAngle < 112) return "Sud";
+  if (normalizedAngle < 157) return "Sud-Ouest";
+  if (normalizedAngle < 202) return "Ouest";
+  if (normalizedAngle < 247) return "Nord-Ouest";
+  if (normalizedAngle < 292) return "Nord";
+  return "Nord-Est";
 }
 
 export function getFacadeAccentColor(edge) {
   const label = getFacadeLabel(edge);
 
-  if (label.includes("South")) return "#f6b444";
-  if (label.includes("North")) return "#7ab3ff";
-  if (label.includes("East")) return "#75d8a7";
+  if (label.includes("Sud")) return "#f6b444";
+  if (label.includes("Nord")) return "#7ab3ff";
+  if (label.includes("Est")) return "#75d8a7";
   return "#eb8f73";
 }

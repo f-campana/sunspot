@@ -46,7 +46,7 @@ export default function App() {
   const [sceneRevision, setSceneRevision] = useState(0);
   const [loading, setLoading] = useState(false);
   const [status, setStatus] = useState(
-    "Ready. Search an address to load live OSM buildings or use the fallback block."
+    "Recherchez une adresse pour charger les bâtiments ou utilisez la scène de démonstration."
   );
 
   const selectedBuilding =
@@ -196,7 +196,7 @@ export default function App() {
     }
 
     setLoading(true);
-    setStatus("Geocoding address...");
+    setStatus("Géocodage de l'adresse…");
 
     try {
       const hit = await geocodeAddress(query);
@@ -206,7 +206,7 @@ export default function App() {
         label: hit.label,
       };
 
-      setStatus("Fetching nearby buildings from Overpass...");
+      setStatus("Chargement des bâtiments environnants…");
       const liveBuildings = await fetchBuildingsFromOverpass(liveCenter);
 
       setCenter(liveCenter);
@@ -215,7 +215,7 @@ export default function App() {
       setSummary(null);
       setDebugEvaluation(null);
       setStatus(
-        `Loaded ${liveBuildings.length} buildings around ${hit.label} (${hit.source}).`
+        `${liveBuildings.length} bâtiments chargés autour de ${hit.label}.`
       );
     } catch (error) {
       console.error(error);
@@ -225,7 +225,7 @@ export default function App() {
       setSummary(null);
       setDebugEvaluation(null);
       setStatus(
-        `Live fetch failed. Falling back to demo block (${error.message || "unknown error"}).`
+        `Chargement échoué — retour à la scène de démonstration.`
       );
     } finally {
       setLoading(false);
@@ -279,12 +279,12 @@ export default function App() {
 
         <div className="viewport-badge-stack">
           <div className="status-pill">
-            <span className="status-pill__label">Sun altitude</span>
+            <span className="status-pill__label">Altitude soleil</span>
             <strong>{Math.round(sunInfo.altitudeDegrees)}°</strong>
           </div>
           <div className="status-pill">
-            <span className="status-pill__label">Loaded source</span>
-            <strong>{buildings[0]?.source === "osm" ? "OpenStreetMap" : "Demo"}</strong>
+            <span className="status-pill__label">Source</span>
+            <strong>{buildings[0]?.source === "osm" ? "OpenStreetMap" : "Démo"}</strong>
           </div>
         </div>
 

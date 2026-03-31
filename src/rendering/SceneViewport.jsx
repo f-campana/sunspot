@@ -138,8 +138,8 @@ const SceneViewport = forwardRef(function SceneViewport(
     sunLight.shadow.camera.bottom = -320;
     sunLight.shadow.camera.near = 1;
     sunLight.shadow.camera.far = 900;
-    sunLight.shadow.bias = -0.0008;
-    sunLight.shadow.normalBias = 0.04;
+    sunLight.shadow.bias = -0.001;
+    sunLight.shadow.normalBias = 0.03;
     scene.add(ambient, hemisphere, sunLight, sunLight.target);
     lightsRef.current = {
       ambient,
@@ -201,14 +201,14 @@ const SceneViewport = forwardRef(function SceneViewport(
     scene.add(facadeHighlight);
     facadeHighlightRef.current = facadeHighlight;
 
-    const markerGeometry = new THREE.SphereGeometry(0.46, 10, 8);
+    const markerGeometry = new THREE.SphereGeometry(0.32, 8, 6);
     for (let index = 0; index < MARKER_COUNT; index += 1) {
       const marker = new THREE.Mesh(
         markerGeometry,
         new THREE.MeshBasicMaterial({
           color: SAMPLE_DEBUG_COLORS.inactive,
           transparent: true,
-          opacity: 0.85,
+          opacity: 0.65,
         })
       );
       marker.visible = false;
@@ -448,20 +448,20 @@ const SceneViewport = forwardRef(function SceneViewport(
     lights.hemisphere.intensity = altitude > 0 ? 0.12 + daylightFactor * 0.15 : 0.08;
 
     if (altitude > 15) {
-      scene.background.set("#adc5d6");
-      scene.fog.color.set("#adc5d6");
-      lights.sunLight.color.set("#fff2d4");
-      groups.ground.material.color.set("#e7ddcc");
+      scene.background.set("#b8cce0");
+      scene.fog.color.set("#b8cce0");
+      lights.sunLight.color.set("#fff5e0");
+      groups.ground.material.color.set("#d8d0c0");
     } else if (altitude > 0) {
-      scene.background.set("#c79c73");
-      scene.fog.color.set("#c79c73");
-      lights.sunLight.color.set("#ffc7a2");
-      groups.ground.material.color.set("#cfbc9a");
+      scene.background.set("#c9a878");
+      scene.fog.color.set("#c9a878");
+      lights.sunLight.color.set("#ffccaa");
+      groups.ground.material.color.set("#c8b898");
     } else {
-      scene.background.set("#0d1526");
-      scene.fog.color.set("#0d1526");
-      lights.sunLight.color.set("#3b4f77");
-      groups.ground.material.color.set("#161d2d");
+      scene.background.set("#101828");
+      scene.fog.color.set("#101828");
+      lights.sunLight.color.set("#334466");
+      groups.ground.material.color.set("#1a1e2a");
     }
 
     const selectedBuildingId = selectedFacade?.buildingId;
@@ -497,13 +497,19 @@ const SceneViewport = forwardRef(function SceneViewport(
       });
 
       const warmth = litSamples / 2;
-      const warmTint = new THREE.Color("#ffe5bc");
+      const warmTint = new THREE.Color("#fff0d0");
+      const coolTint = new THREE.Color("#b0b8c8");
 
       if (selectedBuildingId && !isSelected) {
-        // Dim non-selected buildings to make the selected one pop
-        mesh.material.color.copy(base.clone().multiplyScalar(0.45)).lerp(warmTint, warmth * 0.08);
+        // Dim + desaturate non-selected buildings for cooler receding look
+        mesh.material.color
+          .copy(base.clone().multiplyScalar(0.42))
+          .lerp(coolTint, 0.18)
+          .lerp(warmTint, warmth * 0.06);
       } else {
-        mesh.material.color.copy(base.clone().multiplyScalar(0.75)).lerp(warmTint, warmth * 0.3);
+        mesh.material.color
+          .copy(base.clone().multiplyScalar(0.7))
+          .lerp(warmTint, warmth * 0.3);
       }
     });
   }, [sunInfo, selectedFacade]);
@@ -591,7 +597,7 @@ const SceneViewport = forwardRef(function SceneViewport(
       marker.position.copy(sample.point);
       const state = debugEvaluation.sampleStates[index];
       marker.material.color.set(SAMPLE_DEBUG_COLORS[state] || SAMPLE_DEBUG_COLORS.inactive);
-      marker.material.opacity = state === "lit" ? 0.92 : state === "blocked" ? 0.74 : 0.45;
+      marker.material.opacity = state === "lit" ? 0.7 : state === "blocked" ? 0.5 : 0.25;
     });
   }, [debugEvaluation, showDebugPoints]);
 

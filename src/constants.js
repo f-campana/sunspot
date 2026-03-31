@@ -25,25 +25,25 @@ export const SAMPLE_DEBUG_COLORS = {
 };
 
 export const SEASONS = {
-  winter: { label: "Winter", month: 11, day: 21 },
-  spring: { label: "Spring", month: 2, day: 20 },
-  summer: { label: "Summer", month: 5, day: 21 },
-  today: { label: "Today", relative: true },
+  winter: { label: "Hiver", month: 11, day: 21 },
+  spring: { label: "Printemps", month: 2, day: 20 },
+  summer: { label: "Été", month: 5, day: 21 },
+  today: { label: "Aujourd'hui", relative: true },
 };
 
 export const CAMERA_PRESETS = {
   perspective: {
-    label: "Perspective",
+    label: "3D",
     position: [135, 96, 148],
     target: [0, 14, 0],
   },
   top: {
-    label: "Top",
+    label: "Dessus",
     position: [0.1, 265, 0.1],
     target: [0, 0, 0],
   },
   street: {
-    label: "Street",
+    label: "Rue",
     position: [0, 48, 132],
     target: [0, 15, 0],
   },
@@ -67,5 +67,5 @@ export function formatMinutes(minutes) {
 }
 
 export function floorLabel(floor) {
-  return floor === 0 ? "Ground" : `Floor ${floor}`;
+  return floor === 0 ? "RDC" : `Étage ${floor}`;
 }

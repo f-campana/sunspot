@@ -18,17 +18,17 @@ function scoreTier(score) {
 }
 
 function timelineSlotStyle(entry, isCurrent) {
-  const strength = 0.15 + entry.ratio * 0.6;
   const background =
     entry.state === "night"
       ? "#0e0f13"
       : entry.ratio > 0
-        ? `rgba(245,166,35,${strength})`
-        : "#1a1b22";
+        ? `rgba(245,166,35,${0.12 + entry.ratio * 0.68})`
+        : "rgba(255,255,255,0.03)";
 
   return {
     background,
-    outline: isCurrent ? "1px solid rgba(255,255,255,0.8)" : "none",
+    outline: isCurrent ? "1.5px solid rgba(255,255,255,0.85)" : "none",
+    outlineOffset: isCurrent ? "-1px" : undefined,
   };
 }
 
@@ -46,11 +46,11 @@ export default function FacadePanel({
     return (
       <aside className="facade-panel facade-panel--empty">
         <div className="empty-state">
-          <p className="eyebrow">Facade interaction</p>
-          <h2>Select a facade</h2>
+          <p className="eyebrow">Interaction</p>
+          <h2>Sélectionnez une façade</h2>
           <p>
-            Click a building face to attach the simulation to a real polygon edge and
-            compute floor-band sunlight exposure across the day.
+            Cliquez sur la face d'un bâtiment pour analyser
+            l'ensoleillement de cette façade, étage par étage.
           </p>
         </div>
       </aside>
@@ -62,7 +62,7 @@ export default function FacadePanel({
 
   return (
     <aside className="facade-panel">
-      {/* Header with building name, facade direction, and score badge */}
+      {/* Header */}
       <div className="facade-panel__header">
         <div
           className="edge-swatch"
@@ -71,7 +71,10 @@ export default function FacadePanel({
         <div style={{ flex: 1 }}>
           <div className="facade-panel__title-row">
             <h2>
-              {building.name || "Batiment"} — <span style={{ color: summary.edgeColor }}>Facade {summary.edgeLabel}</span>
+              {building.name || "Bâtiment"} —{" "}
+              <span style={{ color: summary.edgeColor }}>
+                Façade {summary.edgeLabel.toLowerCase()}
+              </span>
             </h2>
             <span className={`score-badge score-badge--${tier}`}>
               {scoreLabel(summary.score)}
@@ -80,7 +83,7 @@ export default function FacadePanel({
         </div>
       </div>
 
-      {/* Main metrics grid — 2×2 */}
+      {/* Metrics 2×2 */}
       <div className="stats-grid">
         <article className="stat-card">
           <span className="meta-label">Ensoleillement</span>
@@ -88,7 +91,7 @@ export default function FacadePanel({
           <span className="stat-sub">par jour</span>
         </article>
         <article className="stat-card">
-          <span className="meta-label">Meilleur creneau</span>
+          <span className="meta-label">Meilleur créneau</span>
           <strong className="stat-value">
             {summary.bestWindow
               ? `${formatMinutes(summary.bestWindow.start)}–${formatMinutes(summary.bestWindow.end)}`
@@ -97,22 +100,34 @@ export default function FacadePanel({
         </article>
         <article className="stat-card">
           <span className="meta-label">Score soleil</span>
-          <strong className="stat-value" style={{ color: tier === "success" ? "#75d8a7" : tier === "warning" ? "#f6b444" : "#f1605f" }}>
+          <strong
+            className="stat-value"
+            style={{
+              color:
+                tier === "success"
+                  ? "#75d8a7"
+                  : tier === "warning"
+                    ? "#f6b444"
+                    : "#f1605f",
+            }}
+          >
             {summary.score}
           </strong>
           <span className="stat-sub">/100</span>
         </article>
         <article className="stat-card">
           <span className="meta-label">Couverture moy.</span>
-          <strong className="stat-value">{Math.round(summary.avgRatio * 100)}%</strong>
-          <span className="stat-sub">facade eclairee</span>
+          <strong className="stat-value">
+            {Math.round(summary.avgRatio * 100)}%
+          </strong>
+          <span className="stat-sub">façade éclairée</span>
         </article>
       </div>
 
       {/* Timeline */}
       <section className="facade-section">
         <div className="section-heading">
-          <span>Journee</span>
+          <span>Journée</span>
           <strong>
             {currentTimelineEntry
               ? `${formatMinutes(currentTimelineEntry.time)} · ${Math.round(currentTimelineEntry.ratio * 100)}%`
@@ -184,7 +199,9 @@ export default function FacadePanel({
       {/* Facade switcher */}
       <section className="facade-section">
         <div className="section-heading">
-          <span>Facades ({building.edges.filter((e) => e.len > 4).length})</span>
+          <span>
+            Façades ({building.edges.filter((e) => e.len > 4).length})
+          </span>
         </div>
         <div className="edge-list">
           {building.edges
@@ -194,31 +211,38 @@ export default function FacadePanel({
               const color = getFacadeAccentColor(edge);
               return (
                 <button
-                  className={isActive ? "edge-button is-active" : "edge-button"}
+                  className={
+                    isActive ? "edge-button is-active" : "edge-button"
+                  }
                   key={edge.index}
                   onClick={() => onSelectEdge(edge.index)}
                   style={
                     isActive
-                      ? { borderColor: color, backgroundColor: `${color}20`, color }
+                      ? {
+                          borderColor: color,
+                          backgroundColor: `${color}20`,
+                          color,
+                        }
                       : undefined
                   }
                 >
-                  {getFacadeLabel(edge)} {Math.round(edge.len)}m
+                  {getFacadeLabel(edge)} {Math.round(edge.len)}{"\u00a0"}m
                 </button>
               );
             })}
         </div>
       </section>
 
-      {/* Insights */}
-      {insights.length > 0 && (
+      {/* Insights — headline + details */}
+      {insights.headline && (
         <section className="facade-section facade-section--insights">
           <div className="section-heading">
             <span>Analyse</span>
           </div>
           <div className="insights-list">
-            {insights.map((line, index) => (
-              <p className="insight-line" key={index}>
+            <p className="insight-headline">{insights.headline}</p>
+            {insights.details.map((line, index) => (
+              <p className="insight-detail" key={index}>
                 {line}
               </p>
             ))}
@@ -226,10 +250,11 @@ export default function FacadePanel({
         </section>
       )}
 
-      {/* Floor info */}
+      {/* Floor clamp warning */}
       {isClampedFloor && (
         <p className="panel-micro" style={{ marginTop: 8 }}>
-          Etage demande: {floorLabel(requestedFloor)} — limite a {floorLabel(effectiveFloor)} par la hauteur du batiment.
+          Étage demandé : {floorLabel(requestedFloor)} — limité
+          à {floorLabel(effectiveFloor)} par la hauteur du bâtiment.
         </p>
       )}
     </aside>

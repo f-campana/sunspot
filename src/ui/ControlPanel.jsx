@@ -30,14 +30,14 @@ export default function ControlPanel({
       <div className="control-panel__header">
         <div className="brand-chip">SUN</div>
         <div>
-          <p className="eyebrow">Facade-level daylight analysis</p>
+          <p className="eyebrow">Analyse d'ensoleillement</p>
           <h1>Sunspot</h1>
         </div>
       </div>
 
       <section className="panel-section">
         <div className="section-heading">
-          <span>Address search</span>
+          <span>Adresse</span>
         </div>
         <div className="address-row">
           <input
@@ -52,17 +52,17 @@ export default function ControlPanel({
             value={address}
           />
           <button className="primary-button" disabled={loading} onClick={onSearch}>
-            {loading ? "Loading" : "Search"}
+            {loading ? "Chargement" : "Rechercher"}
           </button>
         </div>
         <p className="panel-muted">{status}</p>
         <div className="meta-grid">
-          <div>
+          <div className="meta-card">
             <span className="meta-label">Source</span>
-            <strong>{source === "osm" ? "OpenStreetMap" : "Demo scene"}</strong>
+            <strong>{source === "osm" ? "OpenStreetMap" : "Démo"}</strong>
           </div>
-          <div>
-            <span className="meta-label">Buildings</span>
+          <div className="meta-card">
+            <span className="meta-label">Bâtiments</span>
             <strong>{buildingCount}</strong>
           </div>
         </div>
@@ -71,7 +71,7 @@ export default function ControlPanel({
 
       <section className="panel-section">
         <div className="section-heading">
-          <span>Time</span>
+          <span>Heure</span>
           <strong>{formatMinutes(minutes)}</strong>
         </div>
         <input
@@ -84,15 +84,15 @@ export default function ControlPanel({
           value={minutes}
         />
         <div className="range-labels">
-          <span>05:00</span>
-          <span>12:00</span>
-          <span>22:00</span>
+          <span>05h</span>
+          <span>12h</span>
+          <span>22h</span>
         </div>
       </section>
 
       <section className="panel-section">
         <div className="section-heading">
-          <span>Day selection</span>
+          <span>Saison</span>
         </div>
         <div className="button-grid button-grid--four">
           {Object.entries(SEASONS).map(([key, definition]) => (
@@ -109,16 +109,16 @@ export default function ControlPanel({
 
       <section className="panel-section">
         <div className="section-heading">
-          <span>Floor band</span>
+          <span>Étage</span>
           <strong>{floorLabel(floor)}</strong>
         </div>
         <div className="stepper">
           <button className="stepper__button" onClick={() => onFloorChange(floor - 1)}>
-            -
+            −
           </button>
           <div className="stepper__value">
             <strong>{floorLabel(floor)}</strong>
-            <span>Approx. {floor * 3} m above grade</span>
+            <span>Environ {floor * 3} m</span>
           </div>
           <button className="stepper__button" onClick={() => onFloorChange(floor + 1)}>
             +
@@ -128,7 +128,7 @@ export default function ControlPanel({
 
       <section className="panel-section">
         <div className="section-heading">
-          <span>Scene view</span>
+          <span>Vue</span>
         </div>
         <div className="button-grid">
           {Object.entries(CAMERA_PRESETS).map(([key, preset]) => (
@@ -150,11 +150,8 @@ export default function ControlPanel({
             onChange={(event) => onShowDebugPointsChange(event.target.checked)}
             type="checkbox"
           />
-          <span>Show facade sample points</span>
+          <span>Points d'échantillonnage</span>
         </label>
-        <p className="panel-micro">
-          Amber = lit, red = blocked, grey = inactive for the current time slot.
-        </p>
       </section>
     </aside>
   );

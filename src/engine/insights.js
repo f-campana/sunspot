@@ -1,42 +1,45 @@
 /**
- * Generate human-readable insights about facade sunlight exposure.
- * Inspired by the original prototype's analysis section.
+ * Generate structured insights about facade sunlight exposure.
+ * Returns { headline, details[] } for hierarchical display.
  */
 export function generateInsights(summary, season, floor) {
-  const insights = [];
   const hours = summary.hours;
+  let headline;
+  const details = [];
 
+  // Primary headline
   if (hours >= 6) {
-    insights.push("Tres bon ensoleillement naturel");
+    headline = "Très bon ensoleillement naturel";
   } else if (hours >= 3.5) {
-    insights.push("Ensoleillement correct");
+    headline = "Ensoleillement correct";
   } else if (hours >= 1.5) {
-    insights.push("Ensoleillement limite -- luminosite indirecte dominante");
+    headline = "Ensoleillement limité — luminosité indirecte dominante";
   } else if (hours > 0.2) {
-    insights.push("Tres faible ensoleillement direct");
+    headline = "Très faible ensoleillement direct";
   } else {
-    insights.push("Aucun ensoleillement direct sur cette facade");
-    return insights;
+    headline = "Aucun ensoleillement direct sur cette façade";
+    return { headline, details };
   }
 
+  // Supporting details
   if (summary.bestRun >= 180) {
-    insights.push(`Longue plage continue (~${Math.round(summary.bestRun / 60)}h)`);
+    details.push(`Longue plage continue (~${Math.round(summary.bestRun / 60)}h)`);
   } else if (summary.bestRun >= 90) {
-    insights.push(`Creneau continu modere (~${Math.round(summary.bestRun / 60)}h)`);
+    details.push(`Créneau continu modéré (~${Math.round(summary.bestRun / 60)}h)`);
   } else if (hours > 1) {
-    insights.push("Soleil intermittent -- pas de longue plage continue");
+    details.push("Soleil intermittent — pas de longue plage continue");
   }
 
   if (summary.peakPeriod === "am") {
-    insights.push("Exposition dominante le matin");
+    details.push("Exposition dominante le matin");
   } else {
-    insights.push("Exposition dominante l'apres-midi");
+    details.push("Exposition dominante l'après-midi");
   }
 
   if (summary.avgRatio > 0.05 && summary.avgRatio < 0.4) {
-    insights.push("Facade majoritairement ombragee -- soleil partiel uniquement");
+    details.push("Façade majoritairement ombragée — soleil partiel uniquement");
   } else if (summary.avgRatio >= 0.4 && summary.avgRatio < 0.7) {
-    insights.push("Couverture partielle -- une partie de la facade reste dans l'ombre");
+    details.push("Couverture partielle — une partie de la façade reste dans l'ombre");
   }
 
   const topBetter =
@@ -45,28 +48,28 @@ export function generateInsights(summary, season, floor) {
     summary.bottomRatio > summary.topRatio * 1.8 && summary.bottomRatio > 0.15;
 
   if (topBetter) {
-    insights.push("Ensoleillement concentre sur la partie haute de l'etage");
+    details.push("Ensoleillement concentré sur la partie haute de l'étage");
   } else if (bottomBetter) {
-    insights.push("Lumiere rasante -- partie basse plus exposee");
+    details.push("Lumière rasante — partie basse plus exposée");
   } else if (!topBetter && !bottomBetter && summary.avgRatio > 0.5) {
-    insights.push("Exposition homogene sur la hauteur de l'etage");
+    details.push("Exposition homogène sur la hauteur de l'étage");
   }
 
   if (season === "winter" && hours < 2) {
-    insights.push("Tres faible lumiere hivernale");
+    details.push("Très faible lumière hivernale");
   }
   if (season === "winter" && hours >= 3.5) {
-    insights.push("Bon ensoleillement meme en hiver");
+    details.push("Bon ensoleillement même en hiver");
   }
   if (season === "summer" && hours >= 7) {
-    insights.push("Excellente luminosite estivale");
+    details.push("Excellente luminosité estivale");
   }
   if (floor <= 1 && summary.obstruction > 55) {
-    insights.push("Rez-de-chaussee fortement ombrage");
+    details.push("Rez-de-chaussée fortement ombragé");
   }
   if (floor >= 4 && summary.obstruction < 20) {
-    insights.push("Hauteur degagee -- peu d'obstruction");
+    details.push("Hauteur dégagée — peu d'obstruction");
   }
 
-  return insights;
+  return { headline, details };
 }
