@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
   DEFAULT_CENTER,
   DEFAULT_TIME_RANGE,
@@ -31,6 +31,7 @@ const initialBuildings = preprocessBuildings(DEMO_BUILDINGS_RAW, "demo");
 
 export default function App() {
   const sceneRef = useRef(null);
+  const hasAutoSelected = useRef(false);
 
   const [address, setAddress] = useState(DEFAULT_CENTER.label);
   const [buildings, setBuildings] = useState(initialBuildings);
@@ -79,9 +80,12 @@ export default function App() {
     }
   }, [buildings, selectedFacade]);
 
+  const handleSceneReady = useCallback(() => {
+    setSceneRevision((value) => value + 1);
+  }, []);
+
   // Auto-select a meaningful demo facade on first load so the app
   // immediately demonstrates value instead of showing an empty state.
-  const hasAutoSelected = useRef(false);
   useEffect(() => {
     if (hasAutoSelected.current || selectedFacade) {
       return;
@@ -270,7 +274,7 @@ export default function App() {
           cameraPreset={cameraPreset}
           debugEvaluation={debugEvaluation}
           effectiveFloor={effectiveFloor}
-          onSceneReady={() => setSceneRevision((value) => value + 1)}
+          onSceneReady={handleSceneReady}
           onSelectFacade={setSelectedFacade}
           selectedFacade={selectedFacade}
           showDebugPoints={showDebugPoints}
