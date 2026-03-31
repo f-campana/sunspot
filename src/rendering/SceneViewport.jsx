@@ -11,7 +11,7 @@ import {
   FLOOR_HEIGHT,
   SAMPLE_DEBUG_COLORS,
 } from "../constants.js";
-import { findClosestEdge } from "../geometry/facades.js";
+import { findClosestEdge, getFacadeAccentColor } from "../geometry/facades.js";
 
 const MARKER_COUNT = 32;
 
@@ -76,6 +76,7 @@ const SceneViewport = forwardRef(function SceneViewport(
   const meshMapRef = useRef(new Map());
   const markerPoolRef = useRef([]);
   const facadeHighlightRef = useRef(null);
+  const fullHighlightRef = useRef(null);
   const lightsRef = useRef(null);
 
   useImperativeHandle(ref, () => ({
@@ -168,12 +169,29 @@ const SceneViewport = forwardRef(function SceneViewport(
       markerGroup,
     };
 
+    // Full-height building highlight — shows which facade is selected
+    const fullHighlight = new THREE.Mesh(
+      new THREE.PlaneGeometry(1, 1),
+      new THREE.MeshBasicMaterial({
+        color: "#f6b444",
+        transparent: true,
+        opacity: 0.28,
+        side: THREE.DoubleSide,
+        depthTest: false,
+      })
+    );
+    fullHighlight.visible = false;
+    fullHighlight.renderOrder = 499;
+    scene.add(fullHighlight);
+    fullHighlightRef.current = fullHighlight;
+
+    // Floor-band highlight — brighter, shows active analysis band
     const facadeHighlight = new THREE.Mesh(
       new THREE.PlaneGeometry(1, FLOOR_HEIGHT),
       new THREE.MeshBasicMaterial({
         color: "#f6b444",
         transparent: true,
-        opacity: 0.3,
+        opacity: 0.55,
         side: THREE.DoubleSide,
         depthTest: false,
       })
@@ -285,12 +303,10 @@ const SceneViewport = forwardRef(function SceneViewport(
       meshListRef.current = [];
       meshMap.clear();
 
-      if (facadeHighlight.geometry) {
-        facadeHighlight.geometry.dispose();
-      }
-      if (facadeHighlight.material) {
-        facadeHighlight.material.dispose();
-      }
+      [facadeHighlight, fullHighlight].forEach((hl) => {
+        if (hl.geometry) hl.geometry.dispose();
+        if (hl.material) hl.material.dispose();
+      });
 
       renderer.dispose();
       if (container.contains(renderer.domElement)) {
@@ -339,17 +355,27 @@ const SceneViewport = forwardRef(function SceneViewport(
     });
 
     if (Number.isFinite(minX)) {
-      const contextMaterial = new THREE.MeshStandardMaterial({
-        color: "#a39d93",
+      const roadMaterial = new THREE.MeshStandardMaterial({
+        color: "#a09a92",
         roughness: 0.92,
       });
+      const sidewalkMaterial = new THREE.MeshStandardMaterial({
+        color: "#d4ccc0",
+        roughness: 0.9,
+      });
+
       const roadWidth = maxX - minX + 92;
       const roadDepth = maxZ - minZ + 92;
       const cx = (minX + maxX) / 2;
       const cz = (minZ + maxZ) / 2;
+
+      // Main streets
       const strips = [
-        { x: cx, z: minZ - 16, w: roadWidth, d: 13 },
-        { x: cx, z: maxZ + 16, w: roadWidth, d: 13 },
+        // Horizontal streets
+        { x: cx, z: minZ - 16, w: roadWidth, d: 16 },
+        { x: cx, z: maxZ + 16, w: roadWidth, d: 16 },
+        { x: cx, z: cz, w: roadWidth, d: 16 },
+        // Vertical streets
         { x: minX - 14, z: cz, w: 12, d: roadDepth },
         { x: maxX + 14, z: cz, w: 12, d: roadDepth },
       ];
@@ -357,11 +383,26 @@ const SceneViewport = forwardRef(function SceneViewport(
       strips.forEach((strip) => {
         const mesh = new THREE.Mesh(
           new THREE.PlaneGeometry(strip.w, strip.d),
-          contextMaterial.clone()
+          roadMaterial.clone()
         );
         mesh.rotation.x = -Math.PI / 2;
         mesh.position.set(strip.x, 0.05, strip.z);
         mesh.receiveShadow = true;
+        groups.contextGroup.add(mesh);
+      });
+
+      // Sidewalks along the main horizontal street
+      const sidewalks = [
+        { x: cx, z: cz - 9.5, w: roadWidth, d: 1.5 },
+        { x: cx, z: cz + 9.5, w: roadWidth, d: 1.5 },
+      ];
+      sidewalks.forEach((sw) => {
+        const mesh = new THREE.Mesh(
+          new THREE.PlaneGeometry(sw.w, sw.d),
+          sidewalkMaterial.clone()
+        );
+        mesh.rotation.x = -Math.PI / 2;
+        mesh.position.set(sw.x, 0.07, sw.z);
         groups.contextGroup.add(mesh);
       });
     }
@@ -423,8 +464,12 @@ const SceneViewport = forwardRef(function SceneViewport(
       groups.ground.material.color.set("#161d2d");
     }
 
+    const selectedBuildingId = selectedFacade?.buildingId;
+
     meshListRef.current.forEach((mesh) => {
       const base = new THREE.Color(mesh.userData.building.color);
+      const isSelected = mesh.userData.building.id === selectedBuildingId;
+
       if (altitude <= 0) {
         mesh.material.color.copy(base).multiplyScalar(0.34);
         return;
@@ -453,16 +498,25 @@ const SceneViewport = forwardRef(function SceneViewport(
 
       const warmth = litSamples / 2;
       const warmTint = new THREE.Color("#ffe5bc");
-      mesh.material.color.copy(base.clone().multiplyScalar(0.72)).lerp(warmTint, warmth * 0.25);
+
+      if (selectedBuildingId && !isSelected) {
+        // Dim non-selected buildings to make the selected one pop
+        mesh.material.color.copy(base.clone().multiplyScalar(0.45)).lerp(warmTint, warmth * 0.08);
+      } else {
+        mesh.material.color.copy(base.clone().multiplyScalar(0.75)).lerp(warmTint, warmth * 0.3);
+      }
     });
-  }, [sunInfo]);
+  }, [sunInfo, selectedFacade]);
 
   useEffect(() => {
     const highlight = facadeHighlightRef.current;
-    if (!highlight || !selectedFacade) {
-      if (highlight) {
-        highlight.visible = false;
-      }
+    const fullHL = fullHighlightRef.current;
+    if (!highlight || !fullHL) {
+      return;
+    }
+    if (!selectedFacade) {
+      highlight.visible = false;
+      fullHL.visible = false;
       return;
     }
 
@@ -475,21 +529,41 @@ const SceneViewport = forwardRef(function SceneViewport(
 
     if (!selectedBuilding || !selectedEdge) {
       highlight.visible = false;
+      fullHL.visible = false;
       return;
     }
 
+    // Use facade accent color based on direction
+    const accentColor = getFacadeAccentColor(selectedEdge);
+    const offset = 0.32;
+
+    // Full-height highlight covering entire building facade
+    fullHL.visible = true;
+    fullHL.geometry.dispose();
+    fullHL.geometry = new THREE.PlaneGeometry(selectedEdge.len, selectedBuilding.height);
+    fullHL.material.color.set(accentColor);
+    const fullY = selectedBuilding.height / 2;
+    fullHL.position.set(
+      selectedEdge.midX + selectedEdge.nx * offset,
+      fullY,
+      selectedEdge.midZ + selectedEdge.nz * offset
+    );
+    fullHL.lookAt(
+      selectedEdge.midX + selectedEdge.nx * (offset + 1),
+      fullY,
+      selectedEdge.midZ + selectedEdge.nz * (offset + 1)
+    );
+
+    // Floor-band highlight — brighter band at the analyzed floor
     highlight.visible = true;
     highlight.geometry.dispose();
     highlight.geometry = new THREE.PlaneGeometry(selectedEdge.len, FLOOR_HEIGHT);
-    highlight.material.color.set(selectedBuilding.color);
-
-    const y =
-      effectiveFloor * FLOOR_HEIGHT + FLOOR_HEIGHT / 2;
-    const offset = 0.32;
+    highlight.material.color.set(accentColor);
+    const y = effectiveFloor * FLOOR_HEIGHT + FLOOR_HEIGHT / 2;
     highlight.position.set(
-      selectedEdge.midX + selectedEdge.nx * offset,
+      selectedEdge.midX + selectedEdge.nx * (offset - 0.01),
       y,
-      selectedEdge.midZ + selectedEdge.nz * offset
+      selectedEdge.midZ + selectedEdge.nz * (offset - 0.01)
     );
     highlight.lookAt(
       selectedEdge.midX + selectedEdge.nx * (offset + 1),

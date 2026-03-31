@@ -79,6 +79,34 @@ export default function App() {
     }
   }, [buildings, selectedFacade]);
 
+  // Auto-select a meaningful demo facade on first load so the app
+  // immediately demonstrates value instead of showing an empty state.
+  const hasAutoSelected = useRef(false);
+  useEffect(() => {
+    if (hasAutoSelected.current || selectedFacade) {
+      return;
+    }
+    if (!sceneRef.current?.getSimulationContext?.()?.meshes?.length) {
+      return;
+    }
+    // Pick the main demo building and its south-facing edge
+    const demoBuilding = buildings.find((b) => b.id === "b0");
+    if (!demoBuilding) {
+      return;
+    }
+    const southEdge = demoBuilding.edges.find((edge) => {
+      // South-facing: normal points roughly toward +Z (nz > 0.7)
+      return edge.nz > 0.7 && edge.len > 4;
+    });
+    if (southEdge) {
+      hasAutoSelected.current = true;
+      setSelectedFacade({
+        buildingId: demoBuilding.id,
+        edgeIndex: southEdge.index,
+      });
+    }
+  }, [buildings, selectedFacade, sceneRevision]);
+
   useEffect(() => {
     if (!selectedBuilding || !selectedEdge) {
       setSummary(null);
@@ -278,6 +306,7 @@ export default function App() {
           )
         }
         requestedFloor={floor}
+        season={season}
         summary={summary}
       />
     </div>
