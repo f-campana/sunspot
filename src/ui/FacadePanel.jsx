@@ -1,6 +1,11 @@
 import { floorLabel, formatMinutes } from "../constants.js";
 import { generateInsights } from "../engine/insights.js";
 import {
+  estimateFloorCount,
+  getHeightConfidenceLabel,
+  getHeightSourceLabel,
+} from "../data/height.js";
+import {
   getFacadeAccentColor,
   getFacadeLabel,
 } from "../geometry/facades.js";
@@ -59,6 +64,31 @@ export default function FacadePanel({
 
   const tier = scoreTier(summary.score);
   const insights = generateInsights(summary, season, effectiveFloor);
+  const estimatedFloors = estimateFloorCount(building.height_m);
+  const lowConfidenceHeight = building.height_confidence === "low";
+  const sourceLabel = getHeightSourceLabel(building.height_source);
+  const confidenceLabel = getHeightConfidenceLabel(building.height_confidence);
+  const neighborSummary =
+    building.height_source === "neighbor_inference" &&
+    building.height_debug?.neighbor_sample_count
+      ? {
+          count: building.height_debug.neighbor_sample_count,
+          median: building.height_debug.neighbor_height_median,
+        }
+      : null;
+  const rawTagSummary = [
+    building.height_debug?.raw_height
+      ? `height=${building.height_debug.raw_height}`
+      : null,
+    building.height_debug?.raw_levels
+      ? `building:levels=${building.height_debug.raw_levels}`
+      : null,
+    building.height_debug?.raw_roof_levels
+      ? `roof:levels=${building.height_debug.raw_roof_levels}`
+      : null,
+  ]
+    .filter(Boolean)
+    .join(" · ");
 
   return (
     <aside className="facade-panel">
@@ -196,6 +226,52 @@ export default function FacadePanel({
         </div>
       </section>
 
+      <section className="facade-section facade-section--trust">
+        <div className="section-heading">
+          <span>Fiabilité des données</span>
+        </div>
+        <div className="trust-block">
+          <div className="trust-grid">
+            <div className="trust-item">
+              <span className="trust-label">Hauteur estimée</span>
+              <strong>{Math.round(building.height_m)} m</strong>
+            </div>
+            <div className="trust-item">
+              <span className="trust-label">Étages estimés</span>
+              <strong>{estimatedFloors}</strong>
+            </div>
+            <div className="trust-item">
+              <span className="trust-label">Source hauteur</span>
+              <strong>{sourceLabel}</strong>
+            </div>
+            <div className="trust-item">
+              <span className="trust-label">Confiance</span>
+              <strong>{confidenceLabel}</strong>
+            </div>
+          </div>
+
+          {neighborSummary && (
+            <p className="trust-note">
+              Voisins utilisés : {neighborSummary.count} · médiane voisine :{" "}
+              {neighborSummary.median} m
+            </p>
+          )}
+
+          {rawTagSummary && (
+            <p className="trust-note">Tags OSM : {rawTagSummary}</p>
+          )}
+
+          {building.height_source === "default_fallback" &&
+            building.height_debug?.fallback_bucket && (
+              <p className="trust-note">
+                Estimation appliquée selon le contexte bâti :
+                {" "}
+                {building.height_debug.fallback_bucket.replaceAll("_", " ")}.
+              </p>
+            )}
+        </div>
+      </section>
+
       {/* Facade switcher */}
       <section className="facade-section">
         <div className="section-heading">
@@ -254,7 +330,8 @@ export default function FacadePanel({
       {isClampedFloor && (
         <p className="panel-micro" style={{ marginTop: 8 }}>
           Étage demandé : {floorLabel(requestedFloor)} — limité
-          à {floorLabel(effectiveFloor)} par la hauteur du bâtiment.
+          à {floorLabel(effectiveFloor)} selon la hauteur estimée du bâtiment
+          {lowConfidenceHeight ? " (donnée approximative)." : "."}
         </p>
       )}
     </aside>

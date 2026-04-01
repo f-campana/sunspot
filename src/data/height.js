@@ -12,6 +12,7 @@ export const DEFAULT_HOUSE_HEIGHT_M = 9;
 export const DEFAULT_LOW_RISE_HEIGHT_M = 12;
 export const DEFAULT_URBAN_HEIGHT_M = 18;
 export const DEFAULT_URBAN_BLOCK_HEIGHT_M = 21;
+export const NEARBY_DIAGNOSTIC_LIMIT = 5;
 
 const NON_NUMERIC_HEIGHT_VALUES = new Set([
   "",
@@ -43,6 +44,15 @@ function parseNumericToken(value) {
 
   const numeric = Number.parseFloat(match[0].replace(",", "."));
   return Number.isFinite(numeric) ? numeric : null;
+}
+
+function roundDiagnostic(value, precision = 1) {
+  if (!Number.isFinite(value)) {
+    return null;
+  }
+
+  const factor = 10 ** precision;
+  return Math.round(value * factor) / factor;
 }
 
 export function isValidHeightMeters(heightM) {
@@ -142,6 +152,27 @@ export function getBuildingFootprintArea(poly) {
   return Math.abs(polygonSignedArea(poly));
 }
 
+function getRawHeightTagDiagnostics(tags = {}) {
+  const rawHeight = tags.height ?? null;
+  const rawBuildingLevels = tags["building:levels"] ?? null;
+  const rawRoofLevels = tags["roof:levels"] ?? null;
+  const parsedHeightM = parseHeightMeters(tags);
+  const parsedBuildingLevels = parseBuildingLevels(tags);
+  const parsedRoofLevels = parseRoofLevels(tags);
+
+  return {
+    raw_height: rawHeight,
+    raw_levels: rawBuildingLevels,
+    raw_roof_levels: rawRoofLevels,
+    parsed_height_m: parsedHeightM,
+    parsed_building_levels: parsedBuildingLevels,
+    parsed_roof_levels: parsedRoofLevels,
+    rejected_height: rawHeight !== null && !parsedHeightM,
+    rejected_levels: rawBuildingLevels !== null && !parsedBuildingLevels,
+    rejected_roof_levels: rawRoofLevels !== null && !parsedRoofLevels,
+  };
+}
+
 function classifyHeightConfidence(source) {
   if (source === "osm_height") {
     return "high";
@@ -196,6 +227,76 @@ export function inferFallbackHeight({ tags = {}, footprintAreaM2 }) {
   return DEFAULT_URBAN_HEIGHT_M;
 }
 
+export function getFallbackBucket({ tags = {}, footprintAreaM2 }) {
+  const buildingType = String(tags.building || "").toLowerCase();
+
+  if (["garage", "garages", "shed", "kiosk", "roof"].includes(buildingType)) {
+    return "petite_structure";
+  }
+
+  if (
+    ["house", "detached", "semidetached_house", "terrace", "bungalow"].includes(
+      buildingType
+    )
+  ) {
+    return "maison";
+  }
+
+  if (
+    ["industrial", "warehouse", "retail", "supermarket", "service"].includes(
+      buildingType
+    )
+  ) {
+    return "batiment_bas_industriel";
+  }
+
+  if (footprintAreaM2 < 35) {
+    return "petite_emprise";
+  }
+
+  if (footprintAreaM2 < 90) {
+    return "emprise_compacte";
+  }
+
+  if (
+    footprintAreaM2 >= 250 ||
+    ["apartments", "residential", "commercial", "office"].includes(buildingType)
+  ) {
+    return "ilot_urbain_dense";
+  }
+
+  return "urbain_intermediaire";
+}
+
+export function estimateFloorCount(heightM) {
+  if (!isValidHeightMeters(heightM)) {
+    return 0;
+  }
+
+  return Math.max(1, Math.round(heightM / DEFAULT_FLOOR_HEIGHT_M));
+}
+
+const HEIGHT_SOURCE_LABELS = {
+  osm_height: "hauteur OSM",
+  building_levels: "niveaux OSM",
+  neighbor_inference: "inférence par voisinage",
+  default_fallback: "estimation par défaut",
+};
+
+const HEIGHT_CONFIDENCE_LABELS = {
+  high: "élevée",
+  medium: "moyenne",
+  low: "faible",
+};
+
+export function getHeightSourceLabel(source) {
+  return HEIGHT_SOURCE_LABELS[source] || source || "inconnue";
+}
+
+export function getHeightConfidenceLabel(confidence) {
+  return HEIGHT_CONFIDENCE_LABELS[confidence] || confidence || "inconnue";
+}
+
 function computeRoofAllowanceMeters(tags = {}) {
   const roofLevels = parseRoofLevels(tags);
   if (!roofLevels) {
@@ -206,22 +307,22 @@ function computeRoofAllowanceMeters(tags = {}) {
 }
 
 function getKnownHeightCandidate(building) {
-  const explicitHeightM = parseHeightMeters(building.tags);
+  const tagDiagnostics = getRawHeightTagDiagnostics(building.tags);
+  const explicitHeightM = tagDiagnostics.parsed_height_m;
   if (explicitHeightM) {
     return {
       height_m: explicitHeightM,
       height_source: "osm_height",
       height_confidence: classifyHeightConfidence("osm_height"),
       height_debug: {
-        raw_height: building.tags?.height ?? null,
-        raw_levels: building.tags?.["building:levels"] ?? null,
-        raw_roof_levels: building.tags?.["roof:levels"] ?? null,
         footprint_area_m2: building.footprintAreaM2,
+        selection_reason: "explicit_height",
+        ...tagDiagnostics,
       },
     };
   }
 
-  const levels = parseBuildingLevels(building.tags);
+  const levels = tagDiagnostics.parsed_building_levels;
   if (levels) {
     const roofAllowanceM = computeRoofAllowanceMeters(building.tags);
     return {
@@ -229,11 +330,10 @@ function getKnownHeightCandidate(building) {
       height_source: "building_levels",
       height_confidence: classifyHeightConfidence("building_levels"),
       height_debug: {
-        raw_height: building.tags?.height ?? null,
-        raw_levels: building.tags?.["building:levels"] ?? null,
-        raw_roof_levels: building.tags?.["roof:levels"] ?? null,
         roof_allowance_m: roofAllowanceM,
         footprint_area_m2: building.footprintAreaM2,
+        selection_reason: "building_levels",
+        ...tagDiagnostics,
       },
     };
   }
@@ -264,6 +364,7 @@ function median(values) {
 }
 
 export function inferHeightFromNeighbors(building, candidates) {
+  const tagDiagnostics = getRawHeightTagDiagnostics(building.tags);
   const nearbyHeights = candidates
     .filter((candidate) => candidate.id !== building.id)
     .map((candidate) => ({
@@ -289,14 +390,23 @@ export function inferHeightFromNeighbors(building, candidates) {
     height_confidence: classifyHeightConfidence("neighbor_inference"),
     height_debug: {
       neighbor_sample_count: nearbyHeights.length,
-      neighbor_height_median: medianHeightM,
-      neighbor_height_min: Math.min(...sampleHeights),
-      neighbor_height_max: Math.max(...sampleHeights),
+      neighbor_height_median: roundDiagnostic(medianHeightM),
+      neighbor_height_min: roundDiagnostic(Math.min(...sampleHeights)),
+      neighbor_height_max: roundDiagnostic(Math.max(...sampleHeights)),
       neighbor_radius_m: HEIGHT_NEIGHBOR_RADIUS_M,
       footprint_area_m2: building.footprintAreaM2,
-      raw_height: building.tags?.height ?? null,
-      raw_levels: building.tags?.["building:levels"] ?? null,
-      raw_roof_levels: building.tags?.["roof:levels"] ?? null,
+      selection_reason: "neighbor_median",
+      neighbor_examples: nearbyHeights
+        .slice(0, NEARBY_DIAGNOSTIC_LIMIT)
+        .map(({ candidate, distanceM }) => ({
+          id: candidate.id,
+          name: candidate.name,
+          distance_m: roundDiagnostic(distanceM),
+          height_m: roundDiagnostic(candidate.height_m),
+          height_source: candidate.height_source,
+          height_confidence: candidate.height_confidence,
+        })),
+      ...tagDiagnostics,
     },
   };
 }
@@ -323,10 +433,13 @@ export function deriveBuildingHeight(building, knownCandidates) {
     height_confidence: classifyHeightConfidence("default_fallback"),
     height_debug: {
       fallback_reason: "no_explicit_or_neighbor_height",
+      fallback_bucket: getFallbackBucket({
+        tags: building.tags,
+        footprintAreaM2: building.footprintAreaM2,
+      }),
       footprint_area_m2: building.footprintAreaM2,
-      raw_height: building.tags?.height ?? null,
-      raw_levels: building.tags?.["building:levels"] ?? null,
-      raw_roof_levels: building.tags?.["roof:levels"] ?? null,
+      selection_reason: "fallback",
+      ...getRawHeightTagDiagnostics(building.tags),
     },
   };
 }
@@ -394,6 +507,8 @@ export function normalizeFixedHeight(building) {
       height_confidence: "high",
       height_debug: {
         raw_height: building.height ?? building.h ?? null,
+        parsed_height_m: height_m,
+        selection_reason: "fixed_height",
       },
     };
   }
@@ -407,6 +522,27 @@ export function normalizeFixedHeight(building) {
     height_confidence: "low",
     height_debug: {
       fallback_reason: "missing_fixed_height",
+      fallback_bucket: getFallbackBucket({
+        tags: building.tags,
+        footprintAreaM2: getBuildingFootprintArea(building.poly),
+      }),
+      selection_reason: "fallback",
     },
   };
+}
+
+export function getNearbyHeightDiagnostics(building, buildings) {
+  return buildings
+    .filter((candidate) => candidate.id !== building.id)
+    .map((candidate) => ({
+      id: candidate.id,
+      name: candidate.name,
+      distance_m: roundDiagnostic(distanceBetweenBuildings(building, candidate)),
+      height_m: roundDiagnostic(candidate.height_m),
+      height_source: candidate.height_source,
+      height_confidence: candidate.height_confidence,
+    }))
+    .filter((candidate) => candidate.distance_m <= HEIGHT_NEIGHBOR_RADIUS_M)
+    .sort((left, right) => left.distance_m - right.distance_m)
+    .slice(0, NEARBY_DIAGNOSTIC_LIMIT);
 }

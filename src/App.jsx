@@ -14,6 +14,12 @@ import {
   preprocessBuildings,
 } from "./data/buildings.js";
 import {
+  estimateFloorCount,
+  getHeightConfidenceLabel,
+  getHeightSourceLabel,
+  getNearbyHeightDiagnostics,
+} from "./data/height.js";
+import {
   computeSunExposure,
   evaluateFacadeAtTime,
 } from "./engine/exposure.js";
@@ -192,6 +198,32 @@ export default function App() {
     selectedBuilding,
     selectedEdge,
   ]);
+
+  useEffect(() => {
+    if (!import.meta.env.DEV || !selectedBuilding) {
+      return;
+    }
+
+    const nearbyDiagnostics = getNearbyHeightDiagnostics(selectedBuilding, buildings);
+
+    console.groupCollapsed(
+      `[height] ${selectedBuilding.name || selectedBuilding.id}`
+    );
+    console.log("height_m", selectedBuilding.height_m);
+    console.log("estimated_floors", estimateFloorCount(selectedBuilding.height_m));
+    console.log("height_source", {
+      code: selectedBuilding.height_source,
+      label: getHeightSourceLabel(selectedBuilding.height_source),
+    });
+    console.log("height_confidence", {
+      code: selectedBuilding.height_confidence,
+      label: getHeightConfidenceLabel(selectedBuilding.height_confidence),
+    });
+    console.log("height_debug", selectedBuilding.height_debug || {});
+    console.log("nearby_height_context", nearbyDiagnostics);
+    console.log("available_tags", selectedBuilding.tags || {});
+    console.groupEnd();
+  }, [buildings, selectedBuilding]);
 
   async function handleSearch() {
     const query = address.trim();

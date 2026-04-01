@@ -567,6 +567,49 @@ h2 {
   padding-bottom: 10px;
 }
 
+.facade-section--trust {
+  padding-bottom: 10px;
+}
+
+.trust-block {
+  padding: 10px 12px;
+  background: var(--card);
+  border: 1px solid var(--stroke);
+  border-radius: var(--radius);
+}
+
+.trust-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px 10px;
+}
+
+.trust-item {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.trust-label {
+  color: var(--muted);
+  font-size: 0.66rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.trust-item strong {
+  font-family: "Space Grotesk", sans-serif;
+  font-size: 0.88rem;
+  line-height: 1.35;
+}
+
+.trust-note {
+  margin: 8px 0 0;
+  color: var(--muted);
+  font-size: 0.76rem;
+  line-height: 1.5;
+}
+
 .insights-list {
   padding: 10px 12px;
   background: var(--card);
@@ -703,6 +746,10 @@ h2 {
   }
 
   .stats-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .trust-grid {
     grid-template-columns: 1fr;
   }
 }
