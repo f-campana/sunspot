@@ -1,4 +1,9 @@
 import { floorLabel, formatMinutes } from "../constants.js";
+import {
+  getAddressDisplayLabel,
+  getAddressMatchConfidenceLabel,
+  getAddressMatchReasonLabel,
+} from "../data/addressMatching.js";
 import { generateInsights } from "../engine/insights.js";
 import {
   estimateFloorCount,
@@ -89,6 +94,13 @@ export default function FacadePanel({
   ]
     .filter(Boolean)
     .join(" · ");
+  const addressDisplay = getAddressDisplayLabel(building);
+  const addressReasonLabel = getAddressMatchReasonLabel(
+    building.address_match_reason
+  );
+  const addressConfidenceLabel = getAddressMatchConfidenceLabel(
+    building.address_match_confidence
+  );
 
   return (
     <aside className="facade-panel">
@@ -109,6 +121,17 @@ export default function FacadePanel({
             <span className={`score-badge score-badge--${tier}`}>
               {scoreLabel(summary.score)}
             </span>
+          </div>
+          <div className="facade-panel__address-block">
+            <p className="facade-panel__address-line">
+              <span className="facade-panel__address-prefix">
+                {addressDisplay.prefix}
+              </span>
+              <span>{addressDisplay.label}</span>
+            </p>
+            <p className="facade-panel__address-meta">
+              {addressConfidenceLabel} · {addressReasonLabel}
+            </p>
           </div>
         </div>
       </div>

@@ -7,6 +7,13 @@ import {
   getSeasonDate,
 } from "./constants.js";
 import { DEMO_BUILDINGS_RAW } from "./data/demoBuildings.js";
+import { fetchNearbyAddresses } from "./data/addresses.js";
+import {
+  getAddressDisplayLabel,
+  getAddressMatchConfidenceLabel,
+  getAddressMatchReasonLabel,
+  matchAddressesToBuildings,
+} from "./data/addressMatching.js";
 import { geocodeAddress } from "./data/geocode.js";
 import { fetchBuildingsFromOverpass } from "./data/osm.js";
 import {
@@ -225,6 +232,32 @@ export default function App() {
     console.groupEnd();
   }, [buildings, selectedBuilding]);
 
+  useEffect(() => {
+    if (!import.meta.env.DEV || !selectedBuilding) {
+      return;
+    }
+
+    console.groupCollapsed(
+      `[address] ${selectedBuilding.name || selectedBuilding.id}`
+    );
+    console.log("match", {
+      matched_address: selectedBuilding.matched_address,
+      confidence: {
+        code: selectedBuilding.address_match_confidence,
+        label: getAddressMatchConfidenceLabel(
+          selectedBuilding.address_match_confidence
+        ),
+      },
+      reason: {
+        code: selectedBuilding.address_match_reason,
+        label: getAddressMatchReasonLabel(selectedBuilding.address_match_reason),
+      },
+      display: getAddressDisplayLabel(selectedBuilding),
+    });
+    console.log("address_match_debug", selectedBuilding.address_match_debug || {});
+    console.groupEnd();
+  }, [selectedBuilding]);
+
   async function handleSearch() {
     const query = address.trim();
     if (!query) {
@@ -243,15 +276,25 @@ export default function App() {
       };
 
       setStatus("Chargement des bâtiments environnants…");
-      const liveBuildings = await fetchBuildingsFromOverpass(liveCenter);
+      const [liveBuildings, nearbyAddressesResult] = await Promise.all([
+        fetchBuildingsFromOverpass(liveCenter),
+        fetchNearbyAddresses(liveCenter).catch((addressError) => {
+          console.warn("[address] lookup failed", addressError);
+          return [];
+        }),
+      ]);
+      const matchedBuildings = matchAddressesToBuildings(
+        liveBuildings,
+        nearbyAddressesResult
+      );
 
       setCenter(liveCenter);
-      setBuildings(liveBuildings);
+      setBuildings(matchedBuildings);
       setSelectedFacade(null);
       setSummary(null);
       setDebugEvaluation(null);
       setStatus(
-        `${liveBuildings.length} bâtiments chargés autour de ${hit.label}.`
+        `${matchedBuildings.length} bâtiments chargés autour de ${hit.label}.`
       );
     } catch (error) {
       console.error(error);

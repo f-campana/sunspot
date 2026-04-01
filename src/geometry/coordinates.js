@@ -12,3 +12,10 @@ export function latLngToLocal(lat, lng, origin) {
     z: (lat - origin.lat) * -metersPerDegreeLat(),
   };
 }
+
+export function localToLatLng(x, z, origin) {
+  return {
+    lat: origin.lat + z / -metersPerDegreeLat(),
+    lng: origin.lng + x / metersPerDegreeLng(origin.lat),
+  };
+}

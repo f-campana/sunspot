@@ -29,6 +29,10 @@ export function preprocessBuildings(rawBuildings, source = "demo") {
         ...normalizedHeight,
         color: building.color || building.clr || "#c8c0b0",
         tags: building.tags || {},
+        matched_address: building.matched_address || null,
+        address_match_confidence: building.address_match_confidence || "none",
+        address_match_reason: building.address_match_reason || "none",
+        address_match_debug: building.address_match_debug || null,
         source,
       };
     })

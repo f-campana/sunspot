@@ -561,6 +561,39 @@ h2 {
   line-height: 1.35;
 }
 
+.facade-panel__address-block {
+  margin-top: 6px;
+}
+
+.facade-panel__address-line,
+.facade-panel__address-meta {
+  margin: 0;
+}
+
+.facade-panel__address-line {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: baseline;
+  color: var(--text);
+  font-size: 0.84rem;
+  line-height: 1.45;
+}
+
+.facade-panel__address-prefix {
+  color: var(--muted);
+  font-size: 0.74rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.facade-panel__address-meta {
+  margin-top: 2px;
+  color: var(--muted);
+  font-size: 0.74rem;
+  line-height: 1.4;
+}
+
 /* ── Insights ───────────────────────────────────────── */
 
 .facade-section--insights {
