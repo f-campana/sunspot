@@ -14,6 +14,10 @@ import {
   getAddressMatchReasonLabel,
   matchAddressesToBuildings,
 } from "./data/addressMatching.js";
+import {
+  applyBdTopoHeightOverrides,
+  fetchBdTopoBuildings,
+} from "./data/bdtopo.js";
 import { geocodeAddress } from "./data/geocode.js";
 import { fetchBuildingsFromOverpass } from "./data/osm.js";
 import {
@@ -229,6 +233,16 @@ export default function App() {
     console.log("height_debug", selectedBuilding.height_debug || {});
     console.log("nearby_height_context", nearbyDiagnostics);
     console.log("available_tags", selectedBuilding.tags || {});
+    if (selectedBuilding.height_source === "bdtopo") {
+      console.log("bdtopo_override", {
+        previous_height_m: selectedBuilding.height_debug?.previous_height_m,
+        previous_height_source:
+          selectedBuilding.height_debug?.previous_height_source,
+        match_distance_m: selectedBuilding.height_debug?.bdtopo_match_distance_m,
+        match_method: selectedBuilding.height_debug?.bdtopo_match_method,
+        bdtopo_height_m: selectedBuilding.height_debug?.bdtopo_height_m,
+      });
+    }
     console.groupEnd();
   }, [buildings, selectedBuilding]);
 
@@ -276,15 +290,23 @@ export default function App() {
       };
 
       setStatus("Chargement des bâtiments environnants…");
-      const [liveBuildings, nearbyAddressesResult] = await Promise.all([
+      const [liveBuildings, nearbyAddressesResult, bdTopoBuildings] = await Promise.all([
         fetchBuildingsFromOverpass(liveCenter),
         fetchNearbyAddresses(liveCenter).catch((addressError) => {
           console.warn("[address] lookup failed", addressError);
           return [];
         }),
+        fetchBdTopoBuildings(liveCenter).catch((bdTopoError) => {
+          console.warn("[bdtopo] lookup failed", bdTopoError);
+          return [];
+        }),
       ]);
-      const matchedBuildings = matchAddressesToBuildings(
+      const buildingsWithBdTopo = applyBdTopoHeightOverrides(
         liveBuildings,
+        bdTopoBuildings
+      );
+      const matchedBuildings = matchAddressesToBuildings(
+        buildingsWithBdTopo,
         nearbyAddressesResult
       );
 

@@ -277,6 +277,7 @@ export function estimateFloorCount(heightM) {
 }
 
 const HEIGHT_SOURCE_LABELS = {
+  bdtopo: "BD TOPO (IGN)",
   osm_height: "hauteur OSM",
   building_levels: "niveaux OSM",
   neighbor_inference: "inférence par voisinage",
