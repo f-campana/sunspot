@@ -1,34 +1,15 @@
-import {
-  DEFAULT_SEARCH_RADIUS,
-  FLOOR_HEIGHT,
-} from "../constants.js";
+import { DEFAULT_SEARCH_RADIUS } from "../constants.js";
 import { latLngToLocal } from "../geometry/coordinates.js";
 import {
   dedupePolygon,
+  polygonCentroid,
   polygonSignedArea,
 } from "../geometry/polygon.js";
 import { preprocessBuildings } from "./buildings.js";
-
-function estimateHeightMeters(tags = {}) {
-  const absoluteHeight = Number.parseFloat(tags.height);
-  if (Number.isFinite(absoluteHeight) && absoluteHeight > 2) {
-    return absoluteHeight;
-  }
-
-  const levels = Number.parseFloat(tags["building:levels"]);
-  if (Number.isFinite(levels) && levels > 0) {
-    return Math.max(6, levels * FLOOR_HEIGHT);
-  }
-
-  if (tags.building === "apartments" || tags.building === "residential") {
-    return 18;
-  }
-  if (tags.building === "commercial" || tags.building === "office") {
-    return 16;
-  }
-
-  return 15;
-}
+import {
+  deriveOsmBuildingHeights,
+  getBuildingFootprintArea,
+} from "./height.js";
 
 function overpassQuery(lat, lng, radius) {
   return `
@@ -115,7 +96,6 @@ export async function fetchBuildingsFromOverpass(
     const base = {
       id: `osm-${element.type}-${element.id}`,
       name: tags.name,
-      height: estimateHeightMeters(tags),
       color: buildingColor(index),
       tags,
     };
@@ -126,6 +106,8 @@ export async function fetchBuildingsFromOverpass(
         rawBuildings.push({
           ...base,
           poly,
+          centroid: polygonCentroid(poly),
+          footprintAreaM2: getBuildingFootprintArea(poly),
         });
       }
       return;
@@ -137,12 +119,14 @@ export async function fetchBuildingsFromOverpass(
         rawBuildings.push({
           ...base,
           poly: outers[0],
+          centroid: polygonCentroid(outers[0]),
+          footprintAreaM2: getBuildingFootprintArea(outers[0]),
         });
       }
     }
   });
 
-  const buildings = preprocessBuildings(rawBuildings, "osm");
+  const buildings = preprocessBuildings(deriveOsmBuildingHeights(rawBuildings), "osm");
   if (buildings.length < 4) {
     throw new Error("Not enough building footprints returned near this address");
   }

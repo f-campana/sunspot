@@ -24,7 +24,7 @@ function createBuildingMesh(building) {
   shape.closePath();
 
   const geometry = new THREE.ExtrudeGeometry(shape, {
-    depth: building.height,
+    depth: building.height_m,
     bevelEnabled: false,
   });
   geometry.rotateX(-Math.PI / 2);
@@ -479,7 +479,7 @@ const SceneViewport = forwardRef(function SceneViewport(
       [0.35, 0.78].forEach((heightFactor) => {
         const point = new THREE.Vector3(
           mesh.userData.building.centroid.x,
-          mesh.userData.building.height * heightFactor,
+          mesh.userData.building.height_m * heightFactor,
           mesh.userData.building.centroid.z
         );
         raycasterRef.current.set(point, direction);
@@ -546,9 +546,9 @@ const SceneViewport = forwardRef(function SceneViewport(
     // Full-height highlight covering entire building facade
     fullHL.visible = true;
     fullHL.geometry.dispose();
-    fullHL.geometry = new THREE.PlaneGeometry(selectedEdge.len, selectedBuilding.height);
+    fullHL.geometry = new THREE.PlaneGeometry(selectedEdge.len, selectedBuilding.height_m);
     fullHL.material.color.set(accentColor);
-    const fullY = selectedBuilding.height / 2;
+    const fullY = selectedBuilding.height_m / 2;
     fullHL.position.set(
       selectedEdge.midX + selectedEdge.nx * offset,
       fullY,

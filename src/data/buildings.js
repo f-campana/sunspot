@@ -1,4 +1,5 @@
 import { FLOOR_HEIGHT } from "../constants.js";
+import { normalizeFixedHeight } from "./height.js";
 import { buildFacadeEdges } from "../geometry/facades.js";
 import {
   normalizePolygonWinding,
@@ -10,6 +11,14 @@ export function preprocessBuildings(rawBuildings, source = "demo") {
     .map((building, index) => {
       const poly = normalizePolygonWinding(building.poly);
       const edges = buildFacadeEdges(poly);
+      const normalizedHeight = building.height_m
+        ? {
+            height_m: building.height_m,
+            height_source: building.height_source || "osm_height",
+            height_confidence: building.height_confidence || "high",
+            height_debug: building.height_debug || null,
+          }
+        : normalizeFixedHeight({ ...building, poly });
 
       return {
         id: building.id || `building-${index}`,
@@ -17,12 +26,7 @@ export function preprocessBuildings(rawBuildings, source = "demo") {
         poly,
         edges,
         centroid: polygonCentroid(poly),
-        height:
-          Number.isFinite(building.height) && building.height > 2
-            ? building.height
-            : Number.isFinite(building.h) && building.h > 2
-              ? building.h
-              : 18,
+        ...normalizedHeight,
         color: building.color || building.clr || "#c8c0b0",
         tags: building.tags || {},
         source,
@@ -34,6 +38,6 @@ export function preprocessBuildings(rawBuildings, source = "demo") {
 export function getMaxFloorIndex(building) {
   return Math.max(
     0,
-    Math.floor((building.height - (FLOOR_HEIGHT - 0.3)) / FLOOR_HEIGHT)
+    Math.floor((building.height_m - (FLOOR_HEIGHT - 0.3)) / FLOOR_HEIGHT)
   );
 }
