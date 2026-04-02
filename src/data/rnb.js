@@ -10,7 +10,7 @@ import { distancePointToPolygon, pointInPolygon } from "./addressMatching.js";
 const RNB_API_URL = "https://rnb-api.beta.gouv.fr/api/alpha/buildings/";
 export const RNB_MATCH_MAX_DISTANCE_M = 20;
 export const RNB_MATCH_AMBIGUITY_DELTA_M = 4;
-const RNB_PAGE_LIMIT = 200;
+const RNB_PAGE_LIMIT = 100;
 const MAX_RNB_PAGES = 5;
 
 function buildBbox(center, radius) {

@@ -11,6 +11,18 @@ import {
   getBuildingFootprintArea,
 } from "./height.js";
 
+const OVERPASS_ENDPOINTS = [
+  {
+    name: "overpass-api.de",
+    url: "https://overpass-api.de/api/interpreter",
+  },
+  {
+    name: "overpass.openstreetmap.fr",
+    url: "https://overpass.openstreetmap.fr/api/interpreter",
+  },
+];
+const OVERPASS_RADIUS_ATTEMPTS = [1, 0.85, 0.7];
+
 function overpassQuery(lat, lng, radius) {
   return `
 [out:json][timeout:25];
@@ -71,11 +83,8 @@ function buildingColor(index) {
   return palette[index % palette.length];
 }
 
-export async function fetchBuildingsFromOverpass(
-  center,
-  radius = DEFAULT_SEARCH_RADIUS
-) {
-  const response = await fetch("https://overpass-api.de/api/interpreter", {
+async function requestOverpass(endpoint, center, radius) {
+  const response = await fetch(endpoint.url, {
     method: "POST",
     headers: {
       "Content-Type": "text/plain;charset=UTF-8",
@@ -84,52 +93,97 @@ export async function fetchBuildingsFromOverpass(
   });
 
   if (!response.ok) {
-    throw new Error(`Overpass HTTP ${response.status}`);
+    throw new Error(`${endpoint.name} HTTP ${response.status}`);
   }
 
-  const json = await response.json();
-  const elements = Array.isArray(json?.elements) ? json.elements : [];
-  const rawBuildings = [];
+  return response.json();
+}
 
-  elements.forEach((element, index) => {
-    const tags = element.tags || {};
-    const base = {
-      id: `osm-${element.type}-${element.id}`,
-      name: tags.name,
-      color: buildingColor(index),
-      tags,
-    };
+export async function fetchBuildingsFromOverpass(
+  center,
+  radius = DEFAULT_SEARCH_RADIUS
+) {
+  const errors = [];
 
-    if (element.type === "way" && Array.isArray(element.geometry)) {
-      const poly = polygonFromGeometry(element.geometry, center);
-      if (poly) {
-        rawBuildings.push({
-          ...base,
-          poly,
-          centroid: polygonCentroid(poly),
-          footprintAreaM2: getBuildingFootprintArea(poly),
+  for (const radiusFactor of OVERPASS_RADIUS_ATTEMPTS) {
+    const attemptRadius = Math.max(60, Math.round(radius * radiusFactor));
+
+    for (const endpoint of OVERPASS_ENDPOINTS) {
+      try {
+        const json = await requestOverpass(endpoint, center, attemptRadius);
+        const elements = Array.isArray(json?.elements) ? json.elements : [];
+        const rawBuildings = [];
+
+        elements.forEach((element, index) => {
+          const tags = element.tags || {};
+          const base = {
+            id: `osm-${element.type}-${element.id}`,
+            name: tags.name,
+            color: buildingColor(index),
+            tags,
+          };
+
+          if (element.type === "way" && Array.isArray(element.geometry)) {
+            const poly = polygonFromGeometry(element.geometry, center);
+            if (poly) {
+              rawBuildings.push({
+                ...base,
+                poly,
+                centroid: polygonCentroid(poly),
+                footprintAreaM2: getBuildingFootprintArea(poly),
+              });
+            }
+            return;
+          }
+
+          if (element.type === "relation") {
+            const outers = relationOuterPolygons(element, center);
+            if (outers[0]) {
+              rawBuildings.push({
+                ...base,
+                poly: outers[0],
+                centroid: polygonCentroid(outers[0]),
+                footprintAreaM2: getBuildingFootprintArea(outers[0]),
+              });
+            }
+          }
+        });
+
+        const buildings = preprocessBuildings(
+          deriveOsmBuildingHeights(rawBuildings),
+          "osm"
+        );
+
+        if (buildings.length >= 4) {
+          if (
+            import.meta.env.DEV &&
+            (endpoint !== OVERPASS_ENDPOINTS[0] || attemptRadius !== radius)
+          ) {
+            console.warn("[overpass] fallback used", {
+              endpoint: endpoint.name,
+              radius: attemptRadius,
+              buildingCount: buildings.length,
+            });
+          }
+          return buildings;
+        }
+
+        throw new Error(
+          `${endpoint.name} returned only ${buildings.length} usable buildings at ${attemptRadius}m`
+        );
+      } catch (error) {
+        errors.push({
+          endpoint: endpoint.name,
+          radius: attemptRadius,
+          message: error instanceof Error ? error.message : String(error),
         });
       }
-      return;
     }
-
-    if (element.type === "relation") {
-      const outers = relationOuterPolygons(element, center);
-      if (outers[0]) {
-        rawBuildings.push({
-          ...base,
-          poly: outers[0],
-          centroid: polygonCentroid(outers[0]),
-          footprintAreaM2: getBuildingFootprintArea(outers[0]),
-        });
-      }
-    }
-  });
-
-  const buildings = preprocessBuildings(deriveOsmBuildingHeights(rawBuildings), "osm");
-  if (buildings.length < 4) {
-    throw new Error("Not enough building footprints returned near this address");
   }
 
-  return buildings;
+  throw new Error(
+    `Overpass failed after retries: ${errors
+      .map((entry) => `${entry.endpoint}@${entry.radius}m (${entry.message})`)
+      .join(" ; ")}`
+  );
 }
