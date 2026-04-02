@@ -18,8 +18,18 @@ import {
   applyBdTopoHeightOverrides,
   fetchBdTopoBuildings,
 } from "./data/bdtopo.js";
+import {
+  applyBdnbStoreyOverrides,
+  fetchBdnbBuildings,
+} from "./data/bdnb.js";
 import { geocodeAddress } from "./data/geocode.js";
 import { fetchBuildingsFromOverpass } from "./data/osm.js";
+import {
+  fetchRnbBuildings,
+  getRnbMatchConfidenceLabel,
+  getRnbMatchReasonLabel,
+  matchRnbToBuildings,
+} from "./data/rnb.js";
 import {
   getMaxFloorIndex,
   preprocessBuildings,
@@ -30,6 +40,10 @@ import {
   getHeightSourceLabel,
   getNearbyHeightDiagnostics,
 } from "./data/height.js";
+import {
+  getStoreysConfidenceLabel,
+  getStoreysSourceLabel,
+} from "./data/storeys.js";
 import {
   computeSunExposure,
   evaluateFacadeAtTime,
@@ -222,6 +236,17 @@ export default function App() {
     );
     console.log("height_m", selectedBuilding.height_m);
     console.log("estimated_floors", estimateFloorCount(selectedBuilding.height_m));
+    console.log("storeys", {
+      value: selectedBuilding.storeys,
+      source: {
+        code: selectedBuilding.storeys_source,
+        label: getStoreysSourceLabel(selectedBuilding.storeys_source),
+      },
+      confidence: {
+        code: selectedBuilding.storeys_confidence,
+        label: getStoreysConfidenceLabel(selectedBuilding.storeys_confidence),
+      },
+    });
     console.log("height_source", {
       code: selectedBuilding.height_source,
       label: getHeightSourceLabel(selectedBuilding.height_source),
@@ -272,6 +297,45 @@ export default function App() {
     console.groupEnd();
   }, [selectedBuilding]);
 
+  useEffect(() => {
+    if (!import.meta.env.DEV || !selectedBuilding) {
+      return;
+    }
+
+    console.groupCollapsed(
+      `[identity] ${selectedBuilding.name || selectedBuilding.id}`
+    );
+    console.log("building_identity", {
+      address: getAddressDisplayLabel(selectedBuilding),
+      rnb_id: selectedBuilding.rnb_id,
+      rnb_match_confidence: {
+        code: selectedBuilding.rnb_match_confidence,
+        label: getRnbMatchConfidenceLabel(selectedBuilding.rnb_match_confidence),
+      },
+      rnb_match_reason: {
+        code: selectedBuilding.rnb_match_reason,
+        label: getRnbMatchReasonLabel(selectedBuilding.rnb_match_reason),
+      },
+      bdnb_id: selectedBuilding.bdnb_id,
+      storeys: selectedBuilding.storeys,
+      storeys_source: {
+        code: selectedBuilding.storeys_source,
+        label: getStoreysSourceLabel(selectedBuilding.storeys_source),
+      },
+      storeys_confidence: {
+        code: selectedBuilding.storeys_confidence,
+        label: getStoreysConfidenceLabel(selectedBuilding.storeys_confidence),
+      },
+      height_source: {
+        code: selectedBuilding.height_source,
+        label: getHeightSourceLabel(selectedBuilding.height_source),
+      },
+    });
+    console.log("rnb_match_debug", selectedBuilding.rnb_match_debug || {});
+    console.log("storeys_debug", selectedBuilding.storeys_debug || {});
+    console.groupEnd();
+  }, [selectedBuilding]);
+
   async function handleSearch() {
     const query = address.trim();
     if (!query) {
@@ -290,24 +354,43 @@ export default function App() {
       };
 
       setStatus("Chargement des bâtiments environnants…");
-      const [liveBuildings, nearbyAddressesResult, bdTopoBuildings] = await Promise.all([
-        fetchBuildingsFromOverpass(liveCenter),
-        fetchNearbyAddresses(liveCenter).catch((addressError) => {
-          console.warn("[address] lookup failed", addressError);
-          return [];
-        }),
-        fetchBdTopoBuildings(liveCenter).catch((bdTopoError) => {
-          console.warn("[bdtopo] lookup failed", bdTopoError);
-          return [];
-        }),
-      ]);
+      const [liveBuildings, nearbyAddressesResult, bdTopoBuildings, rnbBuildings] =
+        await Promise.all([
+          fetchBuildingsFromOverpass(liveCenter),
+          fetchNearbyAddresses(liveCenter).catch((addressError) => {
+            console.warn("[address] lookup failed", addressError);
+            return [];
+          }),
+          fetchBdTopoBuildings(liveCenter).catch((bdTopoError) => {
+            console.warn("[bdtopo] lookup failed", bdTopoError);
+            return [];
+          }),
+          fetchRnbBuildings(liveCenter).catch((rnbError) => {
+            console.warn("[rnb] lookup failed", rnbError);
+            return [];
+          }),
+        ]);
       const buildingsWithBdTopo = applyBdTopoHeightOverrides(
         liveBuildings,
         bdTopoBuildings
       );
-      const matchedBuildings = matchAddressesToBuildings(
+      const buildingsWithAddresses = matchAddressesToBuildings(
         buildingsWithBdTopo,
         nearbyAddressesResult
+      );
+      const buildingsWithRnb = matchRnbToBuildings(
+        buildingsWithAddresses,
+        rnbBuildings
+      );
+      const bdnbBuildings = await fetchBdnbBuildings({
+        rnbIds: buildingsWithRnb.map((building) => building.rnb_id),
+      }).catch((bdnbError) => {
+        console.warn("[bdnb] lookup failed", bdnbError);
+        return [];
+      });
+      const matchedBuildings = applyBdnbStoreyOverrides(
+        buildingsWithRnb,
+        bdnbBuildings
       );
 
       setCenter(liveCenter);

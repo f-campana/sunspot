@@ -623,6 +623,10 @@ h2 {
   gap: 2px;
 }
 
+.trust-item--wide {
+  grid-column: 1 / -1;
+}
+
 .trust-label {
   color: var(--muted);
   font-size: 0.66rem;

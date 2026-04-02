@@ -6,10 +6,13 @@ import {
 } from "../data/addressMatching.js";
 import { generateInsights } from "../engine/insights.js";
 import {
-  estimateFloorCount,
   getHeightConfidenceLabel,
   getHeightSourceLabel,
 } from "../data/height.js";
+import {
+  getStoreysConfidenceLabel,
+  getStoreysSourceLabel,
+} from "../data/storeys.js";
 import {
   getFacadeAccentColor,
   getFacadeLabel,
@@ -69,10 +72,15 @@ export default function FacadePanel({
 
   const tier = scoreTier(summary.score);
   const insights = generateInsights(summary, season, effectiveFloor);
-  const estimatedFloors = estimateFloorCount(building.height_m);
+  const estimatedFloors = building.storeys || 0;
   const lowConfidenceHeight = building.height_confidence === "low";
+  const lowConfidenceStoreys = building.storeys_confidence === "low";
   const sourceLabel = getHeightSourceLabel(building.height_source);
   const confidenceLabel = getHeightConfidenceLabel(building.height_confidence);
+  const storeysSourceLabel = getStoreysSourceLabel(building.storeys_source);
+  const storeysConfidenceLabel = getStoreysConfidenceLabel(
+    building.storeys_confidence
+  );
   const neighborSummary =
     building.height_source === "neighbor_inference" &&
     building.height_debug?.neighbor_sample_count
@@ -260,23 +268,55 @@ export default function FacadePanel({
               <strong>{Math.round(building.height_m)} m</strong>
             </div>
             <div className="trust-item">
-              <span className="trust-label">Étages estimés</span>
-              <strong>{estimatedFloors}</strong>
-            </div>
-            <div className="trust-item">
               <span className="trust-label">Source hauteur</span>
               <strong>{sourceLabel}</strong>
             </div>
             <div className="trust-item">
-              <span className="trust-label">Confiance</span>
+              <span className="trust-label">Confiance hauteur</span>
               <strong>{confidenceLabel}</strong>
             </div>
+            <div className="trust-item">
+              <span className="trust-label">Étages estimés</span>
+              <strong>{estimatedFloors}</strong>
+            </div>
+            <div className="trust-item">
+              <span className="trust-label">Source étages</span>
+              <strong>{storeysSourceLabel}</strong>
+            </div>
+            <div className="trust-item">
+              <span className="trust-label">Confiance étages</span>
+              <strong>{storeysConfidenceLabel}</strong>
+            </div>
+            {building.rnb_id && (
+              <div className="trust-item trust-item--wide">
+                <span className="trust-label">Référence RNB</span>
+                <strong>{building.rnb_id}</strong>
+              </div>
+            )}
+            {building.bdnb_id && building.storeys_source === "bdnb" && (
+              <div className="trust-item trust-item--wide">
+                <span className="trust-label">Référence BDNB</span>
+                <strong>{building.bdnb_id}</strong>
+              </div>
+            )}
           </div>
+
+          {building.storeys_source === "bdnb" && (
+            <p className="trust-note">
+              Nombre d’étages issu de la BDNB, via le rapprochement RNB.
+            </p>
+          )}
+
+          {building.storeys_source === "derived_from_height" && (
+            <p className="trust-note">
+              Nombre d’étages calculé à partir de la hauteur physique disponible.
+            </p>
+          )}
 
           {neighborSummary && (
             <p className="trust-note">
-              Voisins utilisés : {neighborSummary.count} · médiane voisine :{" "}
-              {neighborSummary.median} m
+              Voisins utilisés pour la hauteur : {neighborSummary.count} · médiane
+              voisine : {neighborSummary.median} m
             </p>
           )}
 
@@ -287,11 +327,18 @@ export default function FacadePanel({
           {building.height_source === "default_fallback" &&
             building.height_debug?.fallback_bucket && (
               <p className="trust-note">
-                Estimation appliquée selon le contexte bâti :
+                Estimation de hauteur appliquée selon le contexte bâti :
                 {" "}
                 {building.height_debug.fallback_bucket.replaceAll("_", " ")}.
               </p>
             )}
+
+          {building.storeys_source === "fallback" && (
+            <p className="trust-note">
+              Nombre d’étages estimé par heuristique locale
+              {lowConfidenceStoreys ? " (donnée approximative)." : "."}
+            </p>
+          )}
         </div>
       </section>
 
@@ -353,8 +400,10 @@ export default function FacadePanel({
       {isClampedFloor && (
         <p className="panel-micro" style={{ marginTop: 8 }}>
           Étage demandé : {floorLabel(requestedFloor)} — limité
-          à {floorLabel(effectiveFloor)} selon la hauteur estimée du bâtiment
-          {lowConfidenceHeight ? " (donnée approximative)." : "."}
+          à {floorLabel(effectiveFloor)} selon le nombre d’étages estimé du bâtiment
+          {lowConfidenceStoreys || lowConfidenceHeight
+            ? " (donnée approximative)."
+            : "."}
         </p>
       )}
     </aside>
