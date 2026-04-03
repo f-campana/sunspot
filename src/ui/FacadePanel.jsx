@@ -1,3 +1,4 @@
+import { useEffect, useRef, useState } from "react";
 import {
   CAMERA_PRESETS,
   SEASONS,
@@ -20,6 +21,11 @@ import {
   getFacadeLabel,
 } from "../geometry/facades.js";
 
+const MOBILE_SHEET_MEDIA_QUERY = "(max-width: 860px)";
+const SHEET_DRAG_THRESHOLD_PX = 72;
+const SHEET_DRAG_ACTIVATION_PX = 6;
+const SHEET_DRAG_MAX_OFFSET_PX = 220;
+
 function timelineSlotStyle(entry, isCurrent) {
   const background =
     entry.state === "night"
@@ -33,6 +39,49 @@ function timelineSlotStyle(entry, isCurrent) {
     outline: isCurrent ? "1.5px solid rgba(255,255,255,0.85)" : "none",
     outlineOffset: isCurrent ? "-1px" : undefined,
   };
+}
+
+function clampSheetDragOffset(sheetState, offset, hasSelection) {
+  const maxOffset = SHEET_DRAG_MAX_OFFSET_PX;
+
+  if (sheetState === "idle") {
+    return hasSelection ? Math.max(Math.min(offset, 0), -maxOffset) : 0;
+  }
+
+  if (sheetState === "result") {
+    return Math.max(Math.min(offset, maxOffset), -maxOffset);
+  }
+
+  if (sheetState === "details") {
+    return Math.max(Math.min(offset, maxOffset), 0);
+  }
+
+  return 0;
+}
+
+function getSheetSnapState(sheetState, offset, hasSelection) {
+  if (Math.abs(offset) < SHEET_DRAG_THRESHOLD_PX) {
+    return sheetState;
+  }
+
+  if (sheetState === "idle") {
+    return hasSelection && offset < 0 ? "result" : "idle";
+  }
+
+  if (sheetState === "result") {
+    if (offset < 0) {
+      return "details";
+    }
+    if (offset > 0) {
+      return "idle";
+    }
+  }
+
+  if (sheetState === "details") {
+    return offset > 0 ? "result" : "details";
+  }
+
+  return sheetState;
 }
 
 export default function FacadePanel({
@@ -60,6 +109,11 @@ export default function FacadePanel({
   const hasSelection = Boolean(building && summary);
   const sheetState = hasSelection ? mobileSheetMode : "idle";
   const detailOpen = sheetState === "details";
+  const [dragOffset, setDragOffset] = useState(0);
+  const [isDragging, setIsDragging] = useState(false);
+  const dragSessionRef = useRef(null);
+  const dragOffsetRef = useRef(0);
+  const dragMovedRef = useRef(false);
 
   function formatDirectSunHours(hours) {
     return new Intl.NumberFormat("fr-FR", {
@@ -69,31 +123,131 @@ export default function FacadePanel({
   }
 
   function handleSheetHandleClick() {
+    if (dragMovedRef.current) {
+      dragMovedRef.current = false;
+      return;
+    }
     if (!hasSelection) {
       return;
     }
     onMobileSheetModeChange(detailOpen ? "result" : "details");
   }
 
+  function handleDragStart(event) {
+    if (typeof window === "undefined") {
+      return;
+    }
+    if (!window.matchMedia(MOBILE_SHEET_MEDIA_QUERY).matches) {
+      return;
+    }
+    if (event.pointerType === "mouse" && event.button !== 0) {
+      return;
+    }
+
+    event.preventDefault();
+    dragMovedRef.current = false;
+    dragOffsetRef.current = 0;
+    dragSessionRef.current = {
+      pointerId: event.pointerId,
+      startY: event.clientY,
+      startState: sheetState,
+    };
+    setDragOffset(0);
+    setIsDragging(true);
+  }
+
+  useEffect(() => {
+    if (!isDragging) {
+      return undefined;
+    }
+
+    function handlePointerMove(event) {
+      const session = dragSessionRef.current;
+      if (!session || event.pointerId !== session.pointerId) {
+        return;
+      }
+
+      const rawOffset = event.clientY - session.startY;
+      const nextOffset = clampSheetDragOffset(
+        session.startState,
+        rawOffset,
+        hasSelection
+      );
+
+      if (Math.abs(rawOffset) > SHEET_DRAG_ACTIVATION_PX) {
+        dragMovedRef.current = true;
+      }
+
+      dragOffsetRef.current = nextOffset;
+      setDragOffset(nextOffset);
+    }
+
+    function finishDrag(pointerId) {
+      const session = dragSessionRef.current;
+      if (!session || (pointerId != null && pointerId !== session.pointerId)) {
+        return;
+      }
+
+      const nextState = getSheetSnapState(
+        session.startState,
+        dragOffsetRef.current,
+        hasSelection
+      );
+
+      setIsDragging(false);
+      setDragOffset(0);
+      dragOffsetRef.current = 0;
+      dragSessionRef.current = null;
+
+      if (nextState !== mobileSheetMode) {
+        onMobileSheetModeChange(nextState);
+      }
+    }
+
+    function handlePointerUp(event) {
+      finishDrag(event.pointerId);
+    }
+
+    function handlePointerCancel(event) {
+      finishDrag(event.pointerId);
+    }
+
+    window.addEventListener("pointermove", handlePointerMove, {
+      passive: true,
+    });
+    window.addEventListener("pointerup", handlePointerUp);
+    window.addEventListener("pointercancel", handlePointerCancel);
+
+    return () => {
+      window.removeEventListener("pointermove", handlePointerMove);
+      window.removeEventListener("pointerup", handlePointerUp);
+      window.removeEventListener("pointercancel", handlePointerCancel);
+    };
+  }, [hasSelection, isDragging, mobileSheetMode, onMobileSheetModeChange]);
+
   if (!hasSelection) {
     return (
       <aside
-        className={`facade-panel facade-panel--empty facade-panel--sheet facade-panel--${sheetState}`}
+        className={`facade-panel facade-panel--empty facade-panel--sheet facade-panel--${sheetState}${isDragging ? " facade-panel--dragging" : ""}`}
+        style={{ "--sheet-drag-offset": `${dragOffset}px` }}
       >
-        <button
-          aria-hidden="true"
-          className="sheet-handle-button"
-          tabIndex={-1}
-          type="button"
-        >
-          <div className="sheet-handle" />
-        </button>
-        <div className="empty-state empty-state--sheet">
-          <p className="eyebrow">Interaction</p>
-          <h2>Sélectionnez une façade</h2>
-          <p>
-            Touchez une face du bâtiment pour voir immédiatement si la lumière y est bonne.
-          </p>
+        <div className="sheet-grab-zone" onPointerDown={handleDragStart}>
+          <button
+            aria-hidden="true"
+            className="sheet-handle-button"
+            onClick={handleSheetHandleClick}
+            tabIndex={-1}
+            type="button"
+          >
+            <div className="sheet-handle" />
+          </button>
+          <div className="empty-state empty-state--sheet">
+            <p className="eyebrow">Interaction</p>
+            <h2>Sélectionnez une façade</h2>
+            <p>
+              Touchez une face du bâtiment pour voir immédiatement si la lumière y est bonne.
+            </p>
+          </div>
         </div>
       </aside>
     );
@@ -106,40 +260,42 @@ export default function FacadePanel({
 
   return (
     <aside
-      className={`facade-panel facade-panel--sheet facade-panel--${sheetState}`}
+      className={`facade-panel facade-panel--sheet facade-panel--${sheetState}${isDragging ? " facade-panel--dragging" : ""}`}
+      style={{ "--sheet-drag-offset": `${dragOffset}px` }}
     >
-      <button
-        aria-expanded={detailOpen}
-        aria-label={detailOpen ? "Réduire le détail" : "Déployer le détail"}
-        className="sheet-handle-button"
-        onClick={handleSheetHandleClick}
-        type="button"
-      >
-        <div className="sheet-handle" />
-      </button>
-      {/* Block A — Identity */}
-      <div className="facade-panel__header">
-        <div
-          className="edge-swatch"
-          style={{ backgroundColor: summary.edgeColor }}
-        />
-        <div style={{ flex: 1 }}>
-          <div className="facade-panel__title-row">
-            <h2>
-              {building.name || "Bâtiment"} —{" "}
-              <span style={{ color: summary.edgeColor }}>
-                Façade {summary.edgeLabel.toLowerCase()}
-              </span>
-            </h2>
+      <div className="sheet-grab-zone" onPointerDown={handleDragStart}>
+        <button
+          aria-expanded={detailOpen}
+          aria-label={detailOpen ? "Réduire le détail" : "Déployer le détail"}
+          className="sheet-handle-button"
+          onClick={handleSheetHandleClick}
+          type="button"
+        >
+          <div className="sheet-handle" />
+        </button>
+        {/* Block A — Identity */}
+        <div className="facade-panel__header">
+          <div
+            className="edge-swatch"
+            style={{ backgroundColor: summary.edgeColor }}
+          />
+          <div style={{ flex: 1 }}>
+            <div className="facade-panel__title-row">
+              <h2>
+                {building.name || "Bâtiment"} —{" "}
+                <span style={{ color: summary.edgeColor }}>
+                  Façade {summary.edgeLabel.toLowerCase()}
+                </span>
+              </h2>
+            </div>
+            {addressDisplay.label && (
+              <p className="facade-panel__address-line" style={{ marginTop: 6 }}>
+                {addressDisplay.label}
+              </p>
+            )}
           </div>
-          {addressDisplay.label && (
-            <p className="facade-panel__address-line" style={{ marginTop: 6 }}>
-              {addressDisplay.label}
-            </p>
-          )}
         </div>
       </div>
-
       {/* Block B — Verdict Card (hero) */}
       <section className="facade-section facade-section--verdict">
         <div

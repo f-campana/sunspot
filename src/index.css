@@ -883,13 +883,17 @@ h2 {
   }
 
   .facade-panel {
+    --sheet-height: min(82vh, 760px);
+    --sheet-idle-visible: 154px;
+    --sheet-result-visible: min(58vh, 520px);
     position: fixed;
     left: 0;
     right: 0;
     bottom: 0;
     z-index: 5;
     width: 100%;
-    max-height: calc(100vh - 96px);
+    height: var(--sheet-height);
+    max-height: none;
     padding: 12px 14px calc(18px + env(safe-area-inset-bottom, 0px));
     border-left: none;
     border-top: 1px solid rgba(255, 255, 255, 0.08);
@@ -901,8 +905,11 @@ h2 {
       0 -2px 0 rgba(255, 255, 255, 0.04);
     overflow-y: auto;
     overscroll-behavior: contain;
-    transform: translateY(0);
-    will-change: max-height, box-shadow;
+    transform: translateY(calc(var(--sheet-offset, 0px) + var(--sheet-drag-offset, 0px)));
+    transition:
+      transform 260ms cubic-bezier(0.22, 0.8, 0.22, 1),
+      box-shadow 220ms ease;
+    will-change: transform, box-shadow;
   }
 
   .viewport-badge-stack {
@@ -956,21 +963,36 @@ h2 {
     display: block;
   }
 
+  .sheet-grab-zone {
+    touch-action: none;
+    user-select: none;
+    cursor: grab;
+  }
+
+  .facade-panel--dragging {
+    transition: none;
+    overflow-y: hidden;
+  }
+
+  .facade-panel--dragging .sheet-grab-zone {
+    cursor: grabbing;
+  }
+
   .sheet-handle {
     display: block;
     margin-bottom: 10px;
   }
 
   .facade-panel--idle {
-    max-height: 154px;
+    --sheet-offset: calc(var(--sheet-height) - var(--sheet-idle-visible));
   }
 
   .facade-panel--result {
-    max-height: min(58vh, 520px);
+    --sheet-offset: calc(var(--sheet-height) - var(--sheet-result-visible));
   }
 
   .facade-panel--details {
-    max-height: min(82vh, 760px);
+    --sheet-offset: 0px;
   }
 
   .facade-panel--empty {

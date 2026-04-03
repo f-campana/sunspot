@@ -546,6 +546,7 @@ export default function App() {
       </main>
 
       <FacadePanel
+        key={selectedFacadeKey || "idle"}
         building={selectedBuilding}
         buildingCount={buildings.length}
         cameraPreset={cameraPreset}
