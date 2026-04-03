@@ -884,8 +884,11 @@ h2 {
 
   .facade-panel {
     --sheet-height: min(
-      calc(100dvh - max(92px, calc(env(safe-area-inset-top, 0px) + 76px))),
-      720px
+      calc(
+        100dvh - var(--mobile-top-ui-height, 0px) -
+          max(18px, calc(env(safe-area-inset-top, 0px) + 12px))
+      ),
+      680px
     );
     --sheet-idle-visible: clamp(136px, 17vh, 160px);
     --sheet-result-visible: min(56vh, 500px);

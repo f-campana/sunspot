@@ -20,13 +20,14 @@ export default function ControlPanel({
   onSearch,
   onSeasonChange,
   onShowDebugPointsChange,
+  panelRef,
   season,
   showDebugPoints,
   source,
   status,
 }) {
   return (
-    <aside className="control-panel">
+    <aside className="control-panel" ref={panelRef}>
       <div className="control-panel__header">
         <div className="brand-chip">SUN</div>
         <div>

@@ -63,6 +63,7 @@ const initialBuildings = preprocessBuildings(DEMO_BUILDINGS_RAW, "demo");
 
 export default function App() {
   const sceneRef = useRef(null);
+  const controlPanelRef = useRef(null);
   const hasAutoSelected = useRef(false);
 
   const [address, setAddress] = useState(DEFAULT_CENTER.label);
@@ -79,6 +80,7 @@ export default function App() {
   const [debugEvaluation, setDebugEvaluation] = useState(null);
   const [sceneRevision, setSceneRevision] = useState(0);
   const [loading, setLoading] = useState(false);
+  const [mobileTopUiHeight, setMobileTopUiHeight] = useState(0);
   const [status, setStatus] = useState(
     "Recherchez une adresse pour charger les bâtiments ou utilisez la scène de démonstration."
   );
@@ -492,8 +494,35 @@ export default function App() {
     setMobileSheetMode(selectedFacadeKey ? "result" : "idle");
   }, [selectedFacadeKey]);
 
+  useEffect(() => {
+    if (typeof window === "undefined" || !controlPanelRef.current) {
+      return undefined;
+    }
+
+    const panelNode = controlPanelRef.current;
+    const updateHeight = () => {
+      setMobileTopUiHeight(panelNode.getBoundingClientRect().height);
+    };
+
+    updateHeight();
+
+    const resizeObserver = new ResizeObserver(() => {
+      updateHeight();
+    });
+    resizeObserver.observe(panelNode);
+    window.addEventListener("resize", updateHeight);
+
+    return () => {
+      resizeObserver.disconnect();
+      window.removeEventListener("resize", updateHeight);
+    };
+  }, []);
+
   return (
-    <div className="app-shell">
+    <div
+      className="app-shell"
+      style={{ "--mobile-top-ui-height": `${mobileTopUiHeight}px` }}
+    >
       <ControlPanel
         address={address}
         buildingCount={buildings.length}
@@ -511,6 +540,7 @@ export default function App() {
         onSearch={handleSearch}
         onSeasonChange={setSeason}
         onShowDebugPointsChange={setShowDebugPoints}
+        panelRef={controlPanelRef}
         season={season}
         showDebugPoints={showDebugPoints}
         source={buildings[0]?.source || "demo"}
