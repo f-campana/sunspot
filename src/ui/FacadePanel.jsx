@@ -1,5 +1,10 @@
 import { useState } from "react";
-import { floorLabel, formatMinutes } from "../constants.js";
+import {
+  CAMERA_PRESETS,
+  SEASONS,
+  floorLabel,
+  formatMinutes,
+} from "../constants.js";
 import {
   getAddressDisplayLabel,
 } from "../data/addressMatching.js";
@@ -36,21 +41,36 @@ export default function FacadePanel({
   currentTimelineEntry,
   effectiveFloor,
   isClampedFloor,
+  buildingCount,
+  cameraPreset,
   onSelectEdge,
+  onCameraPresetChange,
+  onFloorChange,
+  onMinutesChange,
+  onSeasonChange,
+  onShowDebugPointsChange,
   requestedFloor,
+  minutes,
+  season,
+  showDebugPoints,
+  source,
   summary,
 }) {
   const [detailOpen, setDetailOpen] = useState(false);
+  const hasSelection = Boolean(building && summary);
+  const sheetState = !hasSelection ? "idle" : detailOpen ? "details" : "result";
 
-  if (!building || !summary) {
+  if (!hasSelection) {
     return (
-      <aside className="facade-panel facade-panel--empty">
-        <div className="empty-state">
+      <aside
+        className={`facade-panel facade-panel--empty facade-panel--sheet facade-panel--${sheetState}`}
+      >
+        <div className="sheet-handle" />
+        <div className="empty-state empty-state--sheet">
           <p className="eyebrow">Interaction</p>
           <h2>Sélectionnez une façade</h2>
           <p>
-            Cliquez sur la face d'un bâtiment pour analyser
-            l'ensoleillement de cette façade, étage par étage.
+            Touchez une face du bâtiment pour voir immédiatement si la lumière y est bonne.
           </p>
         </div>
       </aside>
@@ -63,7 +83,10 @@ export default function FacadePanel({
   const lowConfidenceStoreys = building.storeys_confidence === "low";
 
   return (
-    <aside className="facade-panel">
+    <aside
+      className={`facade-panel facade-panel--sheet facade-panel--${sheetState}`}
+    >
+      <div className="sheet-handle" />
       {/* Block A — Identity */}
       <div className="facade-panel__header">
         <div
@@ -119,6 +142,101 @@ export default function FacadePanel({
         </div>
       </section>
 
+      <section className="facade-section facade-section--timeline-primary">
+        <div className="section-heading">
+          <span>Journée</span>
+          <strong>
+            {currentTimelineEntry
+              ? `${formatMinutes(currentTimelineEntry.time)} · ${Math.round(currentTimelineEntry.ratio * 100)}%`
+              : ""}
+          </strong>
+        </div>
+        <div className="timeline-strip">
+          {summary.timeline.map((entry) => (
+            <div
+              className="timeline-slot"
+              key={entry.time}
+              style={timelineSlotStyle(
+                entry,
+                currentTimelineEntry?.time === entry.time
+              )}
+              title={`${formatMinutes(entry.time)} — ${Math.round(entry.ratio * 100)}%`}
+            />
+          ))}
+        </div>
+        <div className="timeline-ticks">
+          <span>06h</span>
+          <span>09h</span>
+          <span>12h</span>
+          <span>15h</span>
+          <span>18h</span>
+          <span>21h</span>
+        </div>
+      </section>
+
+      <section className="facade-section sheet-controls mobile-only">
+        <div className="section-heading">
+          <span>Heure</span>
+          <strong>{formatMinutes(minutes)}</strong>
+        </div>
+        <input
+          className="range-input"
+          max={22 * 60}
+          min={5 * 60}
+          onChange={(event) => onMinutesChange(Number(event.target.value))}
+          step={5}
+          type="range"
+          value={minutes}
+        />
+        <div className="range-labels">
+          <span>05h</span>
+          <span>12h</span>
+          <span>22h</span>
+        </div>
+
+        <div className="sheet-controls__group">
+          <div className="section-heading">
+            <span>Saison</span>
+          </div>
+          <div className="button-grid button-grid--four">
+            {Object.entries(SEASONS).map(([key, definition]) => (
+              <button
+                className={key === season ? "segmented-button is-active" : "segmented-button"}
+                key={key}
+                onClick={() => onSeasonChange(key)}
+              >
+                {definition.label}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <div className="sheet-controls__group">
+          <div className="section-heading">
+            <span>Étage</span>
+            <strong>{floorLabel(requestedFloor)}</strong>
+          </div>
+          <div className="stepper">
+            <button
+              className="stepper__button"
+              onClick={() => onFloorChange(requestedFloor - 1)}
+            >
+              −
+            </button>
+            <div className="stepper__value">
+              <strong>{floorLabel(requestedFloor)}</strong>
+              <span>Environ {requestedFloor * 3} m</span>
+            </div>
+            <button
+              className="stepper__button"
+              onClick={() => onFloorChange(requestedFloor + 1)}
+            >
+              +
+            </button>
+          </div>
+        </div>
+      </section>
+
       {/* Detail toggle */}
       <button
         className="detail-toggle"
@@ -135,40 +253,14 @@ export default function FacadePanel({
           {/* Timeline */}
           <div className="detail-panel__section">
             <div className="section-heading">
-              <span>Journée</span>
-              <strong>
-                {currentTimelineEntry
-                  ? `${formatMinutes(currentTimelineEntry.time)} · ${Math.round(currentTimelineEntry.ratio * 100)}%`
-                  : ""}
-              </strong>
+              <span>Résumé</span>
             </div>
             <p className="detail-summary-line">
               {summary.hours.toFixed(1)}h de soleil direct
               {summary.bestWindow
                 ? ` · meilleur créneau ${formatMinutes(summary.bestWindow.start)}–${formatMinutes(summary.bestWindow.end)}`
-                : ""}
+              : ""}
             </p>
-            <div className="timeline-strip">
-              {summary.timeline.map((entry) => (
-                <div
-                  className="timeline-slot"
-                  key={entry.time}
-                  style={timelineSlotStyle(
-                    entry,
-                    currentTimelineEntry?.time === entry.time
-                  )}
-                  title={`${formatMinutes(entry.time)} — ${Math.round(entry.ratio * 100)}%`}
-                />
-              ))}
-            </div>
-            <div className="timeline-ticks">
-              <span>06h</span>
-              <span>09h</span>
-              <span>12h</span>
-              <span>15h</span>
-              <span>18h</span>
-              <span>21h</span>
-            </div>
           </div>
 
           {/* Vertical exposure */}
@@ -238,6 +330,84 @@ export default function FacadePanel({
               )}
             </div>
           </div>
+
+          <div className="detail-panel__section mobile-only">
+            <div className="section-heading">
+              <span>Réglages avancés</span>
+            </div>
+            <div className="button-grid">
+              {Object.entries(CAMERA_PRESETS).map(([key, preset]) => (
+                <button
+                  className={cameraPreset === key ? "segmented-button is-active" : "segmented-button"}
+                  key={key}
+                  onClick={() => onCameraPresetChange(key)}
+                >
+                  {preset.label}
+                </button>
+              ))}
+            </div>
+            <label className="toggle toggle--detail">
+              <input
+                checked={showDebugPoints}
+                onChange={(event) => onShowDebugPointsChange(event.target.checked)}
+                type="checkbox"
+              />
+              <span>Points d’échantillonnage</span>
+            </label>
+          </div>
+
+          <div className="detail-panel__section mobile-only">
+            <div className="section-heading">
+              <span>Contexte</span>
+            </div>
+            <div className="trust-compact">
+              <p className="trust-line">
+                <span className="trust-line__label">Source</span>
+                <span>{source === "osm" ? "OpenStreetMap" : "Démo"}</span>
+              </p>
+              <p className="trust-line">
+                <span className="trust-line__label">Bâtiments</span>
+                <span>{buildingCount}</span>
+              </p>
+            </div>
+          </div>
+
+          <div className="detail-panel__section mobile-only">
+            <div className="section-heading">
+              <span>Façades</span>
+            </div>
+            <div className="edge-list">
+              {building.edges
+                .filter((edge) => edge.len > 4)
+                .map((edge) => {
+                  const isActive = edge.index === summary.edgeIndex;
+                  const color = getFacadeAccentColor(edge);
+                  return (
+                    <button
+                      className={
+                        isActive ? "edge-button is-active" : "edge-button"
+                      }
+                      key={edge.index}
+                      onClick={() => {
+                        setDetailOpen(false);
+                        onSelectEdge(edge.index);
+                      }}
+                      style={
+                        isActive
+                          ? {
+                              borderColor: color,
+                              backgroundColor: `${color}20`,
+                              color,
+                            }
+                          : undefined
+                      }
+                    >
+                      {getFacadeLabel(edge)} {Math.round(edge.len)}{"\u00a0"}m
+                    </button>
+                  );
+                })}
+            </div>
+          </div>
         </div>
       )}
 
@@ -253,7 +423,7 @@ export default function FacadePanel({
       )}
 
       {/* Block C — Facade Switcher */}
-      <section className="facade-section">
+      <section className="facade-section desktop-only">
         <div className="section-heading">
           <span>
             Façades ({building.edges.filter((e) => e.len > 4).length})

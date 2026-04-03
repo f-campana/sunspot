@@ -538,10 +538,19 @@ export default function App() {
       </main>
 
       <FacadePanel
+        key={
+          selectedFacade
+            ? `${selectedFacade.buildingId}-${selectedFacade.edgeIndex}`
+            : "idle"
+        }
         building={selectedBuilding}
+        buildingCount={buildings.length}
+        cameraPreset={cameraPreset}
         currentTimelineEntry={currentTimelineEntry}
         effectiveFloor={effectiveFloor}
         isClampedFloor={Boolean(isClampedFloor)}
+        minutes={minutes}
+        onCameraPresetChange={setCameraPreset}
         onSelectEdge={(edgeIndex) =>
           setSelectedFacade((current) =>
             current
@@ -551,8 +560,16 @@ export default function App() {
                 : null
           )
         }
+        onFloorChange={(value) =>
+          setFloor(Math.min(Math.max(value, MIN_FLOOR), MAX_FLOOR))
+        }
+        onMinutesChange={setMinutes}
+        onSeasonChange={setSeason}
+        onShowDebugPointsChange={setShowDebugPoints}
         requestedFloor={floor}
         season={season}
+        showDebugPoints={showDebugPoints}
+        source={buildings[0]?.source || "demo"}
         summary={summary}
       />
     </div>

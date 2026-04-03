@@ -35,7 +35,7 @@ export default function ControlPanel({
         </div>
       </div>
 
-      <section className="panel-section">
+      <section className="panel-section panel-section--address">
         <div className="section-heading">
           <span>Adresse</span>
         </div>
@@ -55,8 +55,8 @@ export default function ControlPanel({
             {loading ? "Chargement" : "Rechercher"}
           </button>
         </div>
-        <p className="panel-muted">{status}</p>
-        <div className="meta-grid">
+        <p className="panel-muted desktop-only-control">{status}</p>
+        <div className="meta-grid desktop-only-control">
           <div className="meta-card">
             <span className="meta-label">Source</span>
             <strong>{source === "osm" ? "OpenStreetMap" : "Démo"}</strong>
@@ -66,10 +66,10 @@ export default function ControlPanel({
             <strong>{buildingCount}</strong>
           </div>
         </div>
-        <p className="panel-micro">{center.label}</p>
+        <p className="panel-micro desktop-only-control">{center.label}</p>
       </section>
 
-      <section className="panel-section">
+      <section className="panel-section desktop-only-control">
         <div className="section-heading">
           <span>Heure</span>
           <strong>{formatMinutes(minutes)}</strong>
@@ -90,7 +90,7 @@ export default function ControlPanel({
         </div>
       </section>
 
-      <section className="panel-section">
+      <section className="panel-section desktop-only-control">
         <div className="section-heading">
           <span>Saison</span>
         </div>
@@ -107,7 +107,7 @@ export default function ControlPanel({
         </div>
       </section>
 
-      <section className="panel-section">
+      <section className="panel-section desktop-only-control">
         <div className="section-heading">
           <span>Étage</span>
           <strong>{floorLabel(floor)}</strong>
@@ -126,7 +126,7 @@ export default function ControlPanel({
         </div>
       </section>
 
-      <section className="panel-section">
+      <section className="panel-section desktop-only-control">
         <div className="section-heading">
           <span>Vue</span>
         </div>
@@ -143,7 +143,7 @@ export default function ControlPanel({
         </div>
       </section>
 
-      <section className="panel-section panel-section--toggle">
+      <section className="panel-section panel-section--toggle desktop-only-control">
         <label className="toggle">
           <input
             checked={showDebugPoints}

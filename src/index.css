@@ -65,12 +65,23 @@ button {
   scrollbar-color: rgba(255, 255, 255, 0.08) transparent;
 }
 
+.mobile-only {
+  display: none;
+}
+
 .control-panel {
   border-right: 1px solid var(--stroke);
 }
 
 .facade-panel {
   border-left: 1px solid var(--stroke);
+}
+
+.facade-panel--sheet {
+  transition:
+    max-height 180ms ease,
+    box-shadow 180ms ease,
+    transform 180ms ease;
 }
 
 /* ── Typography ─────────────────────────────────────── */
@@ -109,6 +120,15 @@ h2 {
   gap: 12px;
   align-items: center;
   margin-bottom: 16px;
+}
+
+.sheet-handle {
+  display: none;
+  width: 42px;
+  height: 4px;
+  margin: 0 auto 12px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.16);
 }
 
 .brand-chip {
@@ -355,6 +375,10 @@ h2 {
   font-size: 0.84rem;
 }
 
+.toggle--detail {
+  margin-top: 12px;
+}
+
 /* ── Viewport ───────────────────────────────────────── */
 
 .viewport-shell {
@@ -436,6 +460,14 @@ h2 {
 
 .detail-panel__section + .detail-panel__section {
   border-top: 1px solid rgba(255, 255, 255, 0.04);
+}
+
+.sheet-controls {
+  display: none;
+}
+
+.sheet-controls__group {
+  margin-top: 12px;
 }
 
 /* ── Trust compact ─────────────────────────────────── */
@@ -804,38 +836,163 @@ h2 {
 
 @media (max-width: 860px) {
   .app-shell {
-    grid-template-columns: 1fr;
+    display: block;
+    min-height: 100vh;
+    padding-bottom: calc(52vh + env(safe-area-inset-bottom, 0px));
   }
 
-  .control-panel,
-  .facade-panel {
-    position: relative;
-    width: 100%;
-    border: none;
-    border-radius: 0;
-    max-height: none;
+  .mobile-only {
+    display: block;
   }
 
   .control-panel {
-    order: 2;
-    border-top: 1px solid var(--stroke);
+    position: sticky;
+    top: 0;
+    z-index: 6;
+    padding: 12px 12px 10px;
+    border-right: none;
+    border-bottom: 1px solid var(--stroke);
+    max-height: none;
+    overflow: visible;
+    background: rgba(9, 17, 29, 0.94);
+    backdrop-filter: blur(20px);
   }
 
   .viewport-shell {
-    order: 1;
-    min-height: 56vh;
+    min-height: 38vh;
+    height: 38vh;
   }
 
   .facade-panel {
-    order: 3;
-    right: auto;
-    bottom: auto;
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 5;
     width: 100%;
+    max-height: 52vh;
+    padding: 12px 14px calc(18px + env(safe-area-inset-bottom, 0px));
+    border-left: none;
+    border-top: 1px solid var(--stroke);
+    border-radius: 20px 20px 0 0;
+    background: rgba(11, 17, 30, 0.96);
+    box-shadow: var(--shadow);
+    overflow-y: auto;
+    overscroll-behavior: contain;
   }
 
   .viewport-badge-stack {
     top: 12px;
     right: 12px;
+  }
+
+  .control-panel__header {
+    gap: 10px;
+    margin-bottom: 10px;
+  }
+
+  .control-panel__header .eyebrow {
+    display: none;
+  }
+
+  .control-panel__header h1 {
+    font-size: 1.1rem;
+  }
+
+  .brand-chip {
+    width: 32px;
+    height: 32px;
+    font-size: 0.64rem;
+  }
+
+  .control-panel .desktop-only-control {
+    display: none;
+  }
+
+  .control-panel .panel-section--address {
+    padding: 0;
+    border-top: none;
+  }
+
+  .address-row {
+    gap: 6px;
+  }
+
+  .text-input {
+    padding: 10px 12px;
+    font-size: 0.84rem;
+  }
+
+  .primary-button {
+    padding: 0 14px;
+    font-size: 0.8rem;
+  }
+
+  .sheet-handle {
+    display: block;
+  }
+
+  .facade-panel--idle {
+    max-height: 168px;
+  }
+
+  .facade-panel--result {
+    max-height: 52vh;
+  }
+
+  .facade-panel--details {
+    max-height: min(72vh, 620px);
+  }
+
+  .facade-panel--empty {
+    display: block;
+  }
+
+  .empty-state--sheet {
+    max-width: none;
+    text-align: left;
+    padding-bottom: 2px;
+  }
+
+  .empty-state--sheet h2 {
+    font-size: 1rem;
+    margin-bottom: 6px;
+  }
+
+  .empty-state--sheet p {
+    font-size: 0.82rem;
+  }
+
+  .facade-panel__header {
+    margin-bottom: 12px;
+  }
+
+  .facade-panel__title-row h2 {
+    font-size: 0.9rem;
+  }
+
+  .facade-section {
+    padding: 12px 0;
+  }
+
+  .facade-section--timeline-primary {
+    padding-top: 6px;
+  }
+
+  .sheet-controls {
+    display: block;
+  }
+
+  .detail-toggle {
+    padding: 12px 0;
+  }
+
+  .detail-panel {
+    padding-bottom: 0;
+  }
+
+  .desktop-only {
+    display: none;
   }
 
   .button-grid--four,
@@ -845,5 +1002,9 @@ h2 {
 
   .trust-compact {
     gap: 4px;
+  }
+
+  .sun-arc {
+    display: none;
   }
 }
