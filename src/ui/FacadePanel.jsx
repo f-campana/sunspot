@@ -116,12 +116,6 @@ export default function FacadePanel({
               ))}
             </div>
           )}
-          <p className="verdict-card__stats">
-            {summary.hours.toFixed(1)}h soleil
-            {summary.bestWindow
-              ? ` · meilleur ${formatMinutes(summary.bestWindow.start)}–${formatMinutes(summary.bestWindow.end)}`
-              : ""}
-          </p>
         </div>
       </section>
 
@@ -148,6 +142,12 @@ export default function FacadePanel({
                   : ""}
               </strong>
             </div>
+            <p className="detail-summary-line">
+              {summary.hours.toFixed(1)}h de soleil direct
+              {summary.bestWindow
+                ? ` · meilleur créneau ${formatMinutes(summary.bestWindow.start)}–${formatMinutes(summary.bestWindow.end)}`
+                : ""}
+            </p>
             <div className="timeline-strip">
               {summary.timeline.map((entry) => (
                 <div

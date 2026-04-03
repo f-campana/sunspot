@@ -679,19 +679,19 @@ h2 {
   display: flex;
   align-items: baseline;
   gap: 3px;
-  color: var(--text);
+  color: var(--muted);
   flex-shrink: 0;
 }
 
 .verdict-score__value {
   font-family: "Space Grotesk", sans-serif;
-  font-size: 1.1rem;
-  font-weight: 700;
+  font-size: 0.95rem;
+  font-weight: 600;
 }
 
 .verdict-score__suffix {
   color: var(--muted);
-  font-size: 0.72rem;
+  font-size: 0.66rem;
 }
 
 .verdict-card__primary {
@@ -727,14 +727,13 @@ h2 {
   background: var(--verdict-color);
 }
 
-.verdict-card__stats {
-  margin: 10px 0 0;
-  padding-top: 8px;
-  border-top: 1px solid rgba(255, 255, 255, 0.06);
+.detail-summary-line {
+  margin: 8px 0 10px;
   color: var(--muted);
-  font-size: 0.76rem;
+  font-size: 0.74rem;
   font-family: "Space Grotesk", sans-serif;
   letter-spacing: 0.02em;
+  line-height: 1.45;
 }
 
 /* ── Sun arc ────────────────────────────────────────── */
