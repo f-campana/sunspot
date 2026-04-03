@@ -122,6 +122,15 @@ h2 {
   margin-bottom: 16px;
 }
 
+.sheet-handle-button {
+  display: none;
+  width: 100%;
+  padding: 0;
+  margin: -2px 0 6px;
+  border: none;
+  background: transparent;
+}
+
 .sheet-handle {
   display: none;
   width: 42px;
@@ -759,6 +768,15 @@ h2 {
   background: var(--verdict-color);
 }
 
+.verdict-card__summary-line {
+  margin: 10px 0 0;
+  color: color-mix(in srgb, var(--text) 72%, var(--muted));
+  font-family: "Space Grotesk", sans-serif;
+  font-size: 0.72rem;
+  letter-spacing: 0.02em;
+  line-height: 1.45;
+}
+
 .detail-summary-line {
   margin: 8px 0 10px;
   color: var(--muted);
@@ -838,7 +856,7 @@ h2 {
   .app-shell {
     display: block;
     min-height: 100vh;
-    padding-bottom: calc(52vh + env(safe-area-inset-bottom, 0px));
+    padding-bottom: calc(16px + env(safe-area-inset-bottom, 0px));
   }
 
   .mobile-only {
@@ -861,6 +879,7 @@ h2 {
   .viewport-shell {
     min-height: 38vh;
     height: 38vh;
+    z-index: 1;
   }
 
   .facade-panel {
@@ -870,15 +889,20 @@ h2 {
     bottom: 0;
     z-index: 5;
     width: 100%;
-    max-height: 52vh;
+    max-height: calc(100vh - 96px);
     padding: 12px 14px calc(18px + env(safe-area-inset-bottom, 0px));
     border-left: none;
-    border-top: 1px solid var(--stroke);
-    border-radius: 20px 20px 0 0;
-    background: rgba(11, 17, 30, 0.96);
-    box-shadow: var(--shadow);
+    border-top: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 24px 24px 0 0;
+    background:
+      linear-gradient(180deg, rgba(17, 24, 38, 0.98) 0%, rgba(11, 17, 30, 0.98) 18%, rgba(11, 17, 30, 0.97) 100%);
+    box-shadow:
+      0 -18px 48px rgba(0, 0, 0, 0.34),
+      0 -2px 0 rgba(255, 255, 255, 0.04);
     overflow-y: auto;
     overscroll-behavior: contain;
+    transform: translateY(0);
+    will-change: max-height, box-shadow;
   }
 
   .viewport-badge-stack {
@@ -928,20 +952,25 @@ h2 {
     font-size: 0.8rem;
   }
 
-  .sheet-handle {
+  .sheet-handle-button {
     display: block;
   }
 
+  .sheet-handle {
+    display: block;
+    margin-bottom: 10px;
+  }
+
   .facade-panel--idle {
-    max-height: 168px;
+    max-height: 154px;
   }
 
   .facade-panel--result {
-    max-height: 52vh;
+    max-height: min(58vh, 520px);
   }
 
   .facade-panel--details {
-    max-height: min(72vh, 620px);
+    max-height: min(82vh, 760px);
   }
 
   .facade-panel--empty {
@@ -979,8 +1008,65 @@ h2 {
     padding-top: 6px;
   }
 
+  .facade-section--timeline-primary .section-heading {
+    margin-bottom: 8px;
+  }
+
+  .timeline-readout {
+    display: none;
+  }
+
+  .timeline-strip {
+    height: 14px;
+    gap: 1px;
+    opacity: 0.94;
+  }
+
+  .timeline-ticks {
+    margin-top: 5px;
+    font-size: 0.58rem;
+    opacity: 0.5;
+  }
+
   .sheet-controls {
     display: block;
+  }
+
+  .sheet-controls .section-heading {
+    margin-bottom: 8px;
+  }
+
+  .sheet-controls__group {
+    margin-top: 14px;
+  }
+
+  .sheet-controls .range-input {
+    margin-top: 2px;
+  }
+
+  .sheet-controls .button-grid {
+    gap: 8px;
+  }
+
+  .sheet-controls .segmented-button {
+    padding: 10px 8px;
+    border-radius: 12px;
+    font-size: 0.8rem;
+  }
+
+  .sheet-controls .stepper {
+    gap: 8px;
+  }
+
+  .sheet-controls .stepper__button {
+    width: 36px;
+    height: 36px;
+    border-radius: 12px;
+  }
+
+  .sheet-controls .stepper__value {
+    min-height: 36px;
+    justify-content: center;
   }
 
   .detail-toggle {
@@ -998,6 +1084,38 @@ h2 {
   .button-grid--four,
   .button-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .verdict-card {
+    padding: 14px 14px 11px;
+  }
+
+  .verdict-card__label {
+    font-size: 1.36rem;
+  }
+
+  .verdict-score__value {
+    font-size: 0.84rem;
+  }
+
+  .verdict-card__primary {
+    margin-top: 8px;
+  }
+
+  .verdict-insights {
+    margin-top: 8px;
+    gap: 5px;
+  }
+
+  .verdict-insight {
+    font-size: 0.76rem;
+  }
+
+  .verdict-card__summary-line {
+    margin-top: 9px;
+    padding-top: 9px;
+    border-top: 1px solid rgba(255, 255, 255, 0.06);
+    font-size: 0.7rem;
   }
 
   .trust-compact {

@@ -74,6 +74,7 @@ export default function App() {
   const [cameraPreset, setCameraPreset] = useState("perspective");
   const [showDebugPoints, setShowDebugPoints] = useState(true);
   const [selectedFacade, setSelectedFacade] = useState(null);
+  const [mobileSheetMode, setMobileSheetMode] = useState("idle");
   const [summary, setSummary] = useState(null);
   const [debugEvaluation, setDebugEvaluation] = useState(null);
   const [sceneRevision, setSceneRevision] = useState(0);
@@ -483,6 +484,13 @@ export default function App() {
     DEFAULT_TIME_RANGE.slotMinutes;
   const currentTimelineEntry =
     summary?.timeline.find((entry) => entry.time === currentTimelineTime) || null;
+  const selectedFacadeKey = selectedFacade
+    ? `${selectedFacade.buildingId}-${selectedFacade.edgeIndex}`
+    : null;
+
+  useEffect(() => {
+    setMobileSheetMode(selectedFacadeKey ? "result" : "idle");
+  }, [selectedFacadeKey]);
 
   return (
     <div className="app-shell">
@@ -538,11 +546,6 @@ export default function App() {
       </main>
 
       <FacadePanel
-        key={
-          selectedFacade
-            ? `${selectedFacade.buildingId}-${selectedFacade.edgeIndex}`
-            : "idle"
-        }
         building={selectedBuilding}
         buildingCount={buildings.length}
         cameraPreset={cameraPreset}
@@ -550,7 +553,9 @@ export default function App() {
         effectiveFloor={effectiveFloor}
         isClampedFloor={Boolean(isClampedFloor)}
         minutes={minutes}
+        mobileSheetMode={mobileSheetMode}
         onCameraPresetChange={setCameraPreset}
+        onMobileSheetModeChange={setMobileSheetMode}
         onSelectEdge={(edgeIndex) =>
           setSelectedFacade((current) =>
             current

@@ -1,4 +1,3 @@
-import { useState } from "react";
 import {
   CAMERA_PRESETS,
   SEASONS,
@@ -43,9 +42,11 @@ export default function FacadePanel({
   isClampedFloor,
   buildingCount,
   cameraPreset,
+  mobileSheetMode,
   onSelectEdge,
   onCameraPresetChange,
   onFloorChange,
+  onMobileSheetModeChange,
   onMinutesChange,
   onSeasonChange,
   onShowDebugPointsChange,
@@ -56,16 +57,37 @@ export default function FacadePanel({
   source,
   summary,
 }) {
-  const [detailOpen, setDetailOpen] = useState(false);
   const hasSelection = Boolean(building && summary);
-  const sheetState = !hasSelection ? "idle" : detailOpen ? "details" : "result";
+  const sheetState = hasSelection ? mobileSheetMode : "idle";
+  const detailOpen = sheetState === "details";
+
+  function formatDirectSunHours(hours) {
+    return new Intl.NumberFormat("fr-FR", {
+      maximumFractionDigits: 1,
+      minimumFractionDigits: hours < 10 && hours % 1 !== 0 ? 1 : 0,
+    }).format(hours);
+  }
+
+  function handleSheetHandleClick() {
+    if (!hasSelection) {
+      return;
+    }
+    onMobileSheetModeChange(detailOpen ? "result" : "details");
+  }
 
   if (!hasSelection) {
     return (
       <aside
         className={`facade-panel facade-panel--empty facade-panel--sheet facade-panel--${sheetState}`}
       >
-        <div className="sheet-handle" />
+        <button
+          aria-hidden="true"
+          className="sheet-handle-button"
+          tabIndex={-1}
+          type="button"
+        >
+          <div className="sheet-handle" />
+        </button>
         <div className="empty-state empty-state--sheet">
           <p className="eyebrow">Interaction</p>
           <h2>Sélectionnez une façade</h2>
@@ -86,7 +108,15 @@ export default function FacadePanel({
     <aside
       className={`facade-panel facade-panel--sheet facade-panel--${sheetState}`}
     >
-      <div className="sheet-handle" />
+      <button
+        aria-expanded={detailOpen}
+        aria-label={detailOpen ? "Réduire le détail" : "Déployer le détail"}
+        className="sheet-handle-button"
+        onClick={handleSheetHandleClick}
+        type="button"
+      >
+        <div className="sheet-handle" />
+      </button>
       {/* Block A — Identity */}
       <div className="facade-panel__header">
         <div
@@ -132,20 +162,26 @@ export default function FacadePanel({
           <p className="verdict-card__primary">{summary.verdict_primary}</p>
           {summary.verdict_insights?.length > 0 && (
             <div className="verdict-insights">
-              {summary.verdict_insights.map((line) => (
+              {summary.verdict_insights.slice(0, 3).map((line) => (
                 <p className="verdict-insight" key={line}>
                   {line}
                 </p>
               ))}
             </div>
           )}
+          <p className="verdict-card__summary-line">
+            {formatDirectSunHours(summary.hours)} h de soleil direct
+            {summary.bestWindow
+              ? ` • meilleur créneau ${formatMinutes(summary.bestWindow.start)}–${formatMinutes(summary.bestWindow.end)}`
+              : ""}
+          </p>
         </div>
       </section>
 
       <section className="facade-section facade-section--timeline-primary">
         <div className="section-heading">
           <span>Journée</span>
-          <strong>
+          <strong className="timeline-readout">
             {currentTimelineEntry
               ? `${formatMinutes(currentTimelineEntry.time)} · ${Math.round(currentTimelineEntry.ratio * 100)}%`
               : ""}
@@ -240,7 +276,9 @@ export default function FacadePanel({
       {/* Detail toggle */}
       <button
         className="detail-toggle"
-        onClick={() => setDetailOpen((prev) => !prev)}
+        onClick={() =>
+          onMobileSheetModeChange(detailOpen ? "result" : "details")
+        }
         aria-expanded={detailOpen}
       >
         <span className="detail-toggle__icon">{detailOpen ? "▾" : "▸"}</span>
@@ -389,7 +427,7 @@ export default function FacadePanel({
                       }
                       key={edge.index}
                       onClick={() => {
-                        setDetailOpen(false);
+                        onMobileSheetModeChange("result");
                         onSelectEdge(edge.index);
                       }}
                       style={
@@ -442,7 +480,7 @@ export default function FacadePanel({
                   }
                   key={edge.index}
                   onClick={() => {
-                    setDetailOpen(false);
+                    onMobileSheetModeChange("result");
                     onSelectEdge(edge.index);
                   }}
                   style={
