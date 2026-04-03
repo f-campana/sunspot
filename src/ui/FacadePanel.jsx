@@ -281,11 +281,17 @@ export default function FacadePanel({
           />
           <div style={{ flex: 1 }}>
             <div className="facade-panel__title-row">
-              <h2>
+              <h2 className="desktop-only">
                 {building.name || "Bâtiment"} —{" "}
                 <span style={{ color: summary.edgeColor }}>
                   Façade {summary.edgeLabel.toLowerCase()}
                 </span>
+              </h2>
+              <h2
+                className="mobile-only facade-panel__title-mobile"
+                style={{ color: summary.edgeColor }}
+              >
+                Façade {summary.edgeLabel.toLowerCase()}
               </h2>
             </div>
             {addressDisplay.label && (
