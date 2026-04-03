@@ -48,6 +48,7 @@ import {
   computeSunExposure,
   evaluateFacadeAtTime,
 } from "./engine/exposure.js";
+import { computeSunspotVerdict } from "./engine/verdict.js";
 import { getSunInfo } from "./engine/sun.js";
 import {
   getFacadeAccentColor,
@@ -170,8 +171,51 @@ export default function App() {
       raycaster: context.raycaster,
     });
 
+    const summerReference = computeSunExposure({
+      building: selectedBuilding,
+      edge: selectedEdge,
+      floor: effectiveFloor,
+      date: getSeasonDate("summer"),
+      timeRange: DEFAULT_TIME_RANGE,
+      center,
+      meshes: context.meshes,
+      selfMesh,
+      raycaster: context.raycaster,
+    });
+
+    const winterReference = computeSunExposure({
+      building: selectedBuilding,
+      edge: selectedEdge,
+      floor: effectiveFloor,
+      date: getSeasonDate("winter"),
+      timeRange: DEFAULT_TIME_RANGE,
+      center,
+      meshes: context.meshes,
+      selfMesh,
+      raycaster: context.raycaster,
+    });
+
+    const verdict = computeSunspotVerdict({
+      summary: exposure,
+      seasonal: {
+        summer: summerReference,
+        winter: winterReference,
+      },
+    });
+
     setSummary({
       ...exposure,
+      ...verdict,
+      seasonalReferences: {
+        summer: {
+          hours: summerReference.hours,
+          avgRatio: summerReference.avgRatio,
+        },
+        winter: {
+          hours: winterReference.hours,
+          avgRatio: winterReference.avgRatio,
+        },
+      },
       edgeColor: getFacadeAccentColor(selectedEdge),
       edgeLabel: getFacadeLabel(selectedEdge),
       edgeLength: selectedEdge.len,
@@ -335,6 +379,24 @@ export default function App() {
     console.log("storeys_debug", selectedBuilding.storeys_debug || {});
     console.groupEnd();
   }, [selectedBuilding]);
+
+  useEffect(() => {
+    if (!import.meta.env.DEV || !selectedBuilding || !summary?.verdict_breakdown) {
+      return;
+    }
+
+    console.groupCollapsed(
+      `[verdict] ${selectedBuilding.name || selectedBuilding.id}`
+    );
+    console.log("verdict", {
+      label: summary.verdict,
+      score: summary.verdict_score,
+      primary: summary.verdict_primary,
+      insights: summary.verdict_insights,
+    });
+    console.log("verdict_breakdown", summary.verdict_breakdown);
+    console.groupEnd();
+  }, [selectedBuilding, summary]);
 
   async function handleSearch() {
     const query = address.trim();

@@ -18,18 +18,6 @@ import {
   getFacadeLabel,
 } from "../geometry/facades.js";
 
-function scoreLabel(score) {
-  if (score >= 55) return "Excellent";
-  if (score >= 25) return "Correct";
-  return "Faible";
-}
-
-function scoreTier(score) {
-  if (score >= 55) return "success";
-  if (score >= 25) return "warning";
-  return "danger";
-}
-
 function timelineSlotStyle(entry, isCurrent) {
   const background =
     entry.state === "night"
@@ -70,7 +58,6 @@ export default function FacadePanel({
     );
   }
 
-  const tier = scoreTier(summary.score);
   const insights = generateInsights(summary, season, effectiveFloor);
   const estimatedFloors = building.storeys || 0;
   const lowConfidenceHeight = building.height_confidence === "low";
@@ -109,6 +96,7 @@ export default function FacadePanel({
   const addressConfidenceLabel = getAddressMatchConfidenceLabel(
     building.address_match_confidence
   );
+  const verdictMeta = summary.verdict_meta;
 
   return (
     <aside className="facade-panel">
@@ -126,9 +114,6 @@ export default function FacadePanel({
                 Façade {summary.edgeLabel.toLowerCase()}
               </span>
             </h2>
-            <span className={`score-badge score-badge--${tier}`}>
-              {scoreLabel(summary.score)}
-            </span>
           </div>
           <div className="facade-panel__address-block">
             <p className="facade-panel__address-line">
@@ -143,6 +128,37 @@ export default function FacadePanel({
           </div>
         </div>
       </div>
+
+      <section className="facade-section facade-section--verdict">
+        <div
+          className={`verdict-card verdict-card--${verdictMeta.tone}`}
+          style={{
+            "--verdict-color": verdictMeta.color,
+            "--verdict-accent": verdictMeta.accent,
+          }}
+        >
+          <div className="verdict-card__row">
+            <div>
+              <p className="verdict-card__eyebrow">Verdict Sunspot</p>
+              <h3 className="verdict-card__label">{summary.verdict}</h3>
+            </div>
+            <div className="verdict-score">
+              <span className="verdict-score__value">{summary.verdict_score}</span>
+              <span className="verdict-score__suffix">/100</span>
+            </div>
+          </div>
+          <p className="verdict-card__primary">{summary.verdict_primary}</p>
+          {summary.verdict_insights?.length > 0 && (
+            <div className="verdict-insights">
+              {summary.verdict_insights.map((line) => (
+                <p className="verdict-insight" key={line}>
+                  {line}
+                </p>
+              ))}
+            </div>
+          )}
+        </div>
+      </section>
 
       {/* Metrics 2×2 */}
       <div className="stats-grid">
@@ -160,21 +176,9 @@ export default function FacadePanel({
           </strong>
         </article>
         <article className="stat-card">
-          <span className="meta-label">Score soleil</span>
-          <strong
-            className="stat-value"
-            style={{
-              color:
-                tier === "success"
-                  ? "#75d8a7"
-                  : tier === "warning"
-                    ? "#f6b444"
-                    : "#f1605f",
-            }}
-          >
-            {summary.score}
-          </strong>
-          <span className="stat-sub">/100</span>
+          <span className="meta-label">Score technique</span>
+          <strong className="stat-value">{summary.score}</strong>
+          <span className="stat-sub">simulation brute</span>
         </article>
         <article className="stat-card">
           <span className="meta-label">Couverture moy.</span>
@@ -383,7 +387,7 @@ export default function FacadePanel({
       {insights.headline && (
         <section className="facade-section facade-section--insights">
           <div className="section-heading">
-            <span>Analyse</span>
+            <span>Lecture détaillée</span>
           </div>
           <div className="insights-list">
             <p className="insight-headline">{insights.headline}</p>

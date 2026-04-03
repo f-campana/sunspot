@@ -594,6 +594,101 @@ h2 {
   line-height: 1.4;
 }
 
+/* ── Verdict card ───────────────────────────────────── */
+
+.facade-section--verdict {
+  padding-bottom: 6px;
+}
+
+.verdict-card {
+  padding: 14px 14px 12px;
+  border-radius: 14px;
+  border: 1px solid color-mix(in srgb, var(--verdict-color) 26%, var(--stroke));
+  background:
+    linear-gradient(
+      180deg,
+      color-mix(in srgb, var(--verdict-accent) 100%, transparent) 0%,
+      rgba(8, 13, 24, 0.9) 100%
+    ),
+    var(--card);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.03);
+}
+
+.verdict-card__row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.verdict-card__eyebrow {
+  margin: 0 0 3px;
+  color: var(--muted);
+  font-size: 0.68rem;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+}
+
+.verdict-card__label {
+  margin: 0;
+  font-family: "Space Grotesk", sans-serif;
+  font-size: 1.45rem;
+  line-height: 1.05;
+  color: var(--verdict-color);
+}
+
+.verdict-score {
+  display: flex;
+  align-items: baseline;
+  gap: 3px;
+  color: var(--text);
+  flex-shrink: 0;
+}
+
+.verdict-score__value {
+  font-family: "Space Grotesk", sans-serif;
+  font-size: 1.1rem;
+  font-weight: 700;
+}
+
+.verdict-score__suffix {
+  color: var(--muted);
+  font-size: 0.72rem;
+}
+
+.verdict-card__primary {
+  margin: 10px 0 0;
+  font-size: 0.84rem;
+  line-height: 1.5;
+  color: var(--text);
+}
+
+.verdict-insights {
+  display: grid;
+  gap: 6px;
+  margin-top: 10px;
+}
+
+.verdict-insight {
+  margin: 0;
+  padding-left: 10px;
+  position: relative;
+  color: var(--muted);
+  font-size: 0.78rem;
+  line-height: 1.45;
+}
+
+.verdict-insight::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 0.52em;
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: var(--verdict-color);
+}
+
 /* ── Insights ───────────────────────────────────────── */
 
 .facade-section--insights {
